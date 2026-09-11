@@ -32,10 +32,17 @@
           <h1 id="page-title">Weniger suchen.<br /><em>Mehr verkaufen.</em></h1>
           <p class="hero-copy">Halte deine Gegenstände, Preise und Bilder an einem Ort fest – und synchronisiere sie geräteübergreifend.</p>
         </div>
-        <div class="value-card" aria-label="Gesamtwert">
-          <span class="value-label">Gesamtwert</span>
-          <strong id="total-value">0,00&nbsp;€</strong>
-          <span class="value-caption" id="item-count">0 Gegenstände</span>
+        <div class="value-metrics">
+          <div class="value-card" aria-label="Gesamtwert der noch verfügbaren Gegenstände">
+            <span class="value-label">Gesamtwert</span>
+            <strong id="total-value">0,00&nbsp;€</strong>
+            <span class="value-caption" id="item-count">0 Gegenstände</span>
+          </div>
+          <button class="value-card value-card-sold" id="sold-value-button" type="button" aria-label="Verkaufswert anzeigen">
+            <span class="value-label">Verkauft</span>
+            <strong id="sold-value">0,00&nbsp;€</strong>
+            <span class="value-caption" id="sold-count">0 verkauft · Details öffnen</span>
+          </button>
         </div>
       </section>
 
@@ -45,7 +52,10 @@
             <p class="eyebrow">Inventar</p>
             <h2>Deine Gegenstände</h2>
           </div>
-          <button class="button button-primary" id="open-form-button" type="button"><span aria-hidden="true">＋</span> Gegenstand hinzufügen</button>
+          <div class="section-actions">
+            <button class="button button-quiet" id="compact-view-button" type="button" aria-pressed="false">Kompaktansicht</button>
+            <button class="button button-primary" id="open-form-button" type="button"><span aria-hidden="true">＋</span> Gegenstand hinzufügen</button>
+          </div>
         </div>
 
         <div class="empty-state" id="empty-state">
@@ -74,6 +84,14 @@
             <label>
               <span>Preis in Euro</span>
               <div class="input-with-suffix"><input id="item-price" name="price" type="number" min="0" step="0.01" placeholder="0,00" required /><span>€</span></div>
+            </label>
+            <label class="sold-toggle">
+              <input id="item-sold" name="sold" type="checkbox" />
+              <span>Dieser Gegenstand wurde bereits verkauft</span>
+            </label>
+            <label id="sold-price-field" hidden>
+              <span>Verkauft für</span>
+              <div class="input-with-suffix"><input id="item-sold-price" name="soldPrice" type="number" min="0" step="0.01" placeholder="0,00" /><span>€</span></div>
             </label>
             <label>
               <span>Beschreibung <small>(optional)</small></span>
@@ -138,9 +156,19 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="sold-backdrop" hidden>
+      <section class="modal sold-modal" role="dialog" aria-modal="true" aria-labelledby="sold-title">
+        <button class="close-button" id="close-sold-button" type="button" aria-label="Verkaufsliste schließen">×</button>
+        <p class="eyebrow">Verkaufsübersicht</p>
+        <h2 id="sold-title">Verkaufte Gegenstände</h2>
+        <p class="sold-summary" id="sold-summary"></p>
+        <div class="sold-list" id="sold-list"></div>
+      </section>
+    </div>
+
     <template id="item-template">
       <article class="item-card">
-        <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span></div>
+        <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span><strong class="compact-price"></strong></div>
         <div class="item-card-body">
           <div class="item-card-topline"><h3 class="item-name"></h3><button class="more-button" type="button" aria-label="Optionen">•••</button></div>
           <p class="item-description"></p>

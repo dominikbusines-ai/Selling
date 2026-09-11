@@ -13,6 +13,7 @@ Der Ordner ist als vollständiges statisches GitHub-/Vercel-Projekt vorbereitet.
 - JSON-Export und -Import für die Übertragung zwischen Geräten
 - Mobile Darstellung mit iPhone-Safe-Area-Unterstützung
 - KI-Assistent für Beschreibung, Verbesserung, Preisempfehlung und eigene Fragen
+- Verkaufsstatus mit tatsächlichem Verkaufspreis und Verkaufsübersicht
 
 ## Starten
 
@@ -41,3 +42,7 @@ Der Wert ist der persönliche Anthropic-API-Key. Er wird ausschließlich in `api
 Für die KI-Anfrage werden die Daten des ausgewählten Gegenstands und – falls vorhanden – sein Bild an Anthropic übertragen. Die voreingestellten Aufgaben sind Beschreibung schreiben, Beschreibung verbessern und Preisempfehlung; zusätzlich kann eine eigene Frage gestellt werden.
 
 Die optionalen öffentlichen Variablen `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` sind in `.env.example` dokumentiert. Sie müssen nicht angelegt werden, wenn die bereits im Projekt hinterlegten öffentlichen Werte verwendet werden.
+
+## Verkaufsstatus aktivieren
+
+Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Danach können Gegenstände als verkauft markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.

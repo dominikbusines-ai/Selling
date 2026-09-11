@@ -16,6 +16,7 @@ const state = {
   syncTimer: null,
   aiItemId: null,
   aiResult: '',
+  compactView: localStorage.getItem('verkaufsliste-compact-view') === 'true',
   busy: false
 };
 let lockedScrollY = 0;
@@ -24,8 +25,9 @@ const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
   id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), preview: document.querySelector('#upload-preview'),
-  syncStatus: document.querySelector('#sync-status'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
-  aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error')
+  syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
+  aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
+  sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
 };
 
 function loadLocalItems() {
@@ -46,30 +48,74 @@ function formatDate(value) {
 
 function render() {
   elements.grid.innerHTML = '';
+  elements.grid.classList.toggle('compact-view', state.compactView);
   elements.empty.hidden = state.items.length > 0;
-  const total = state.items.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const availableItems = state.items.filter((item) => !item.sold);
+  const soldItems = state.items.filter((item) => item.sold);
+  const total = availableItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const soldTotal = soldItems.reduce((sum, item) => sum + Number(item.soldPrice ?? item.price ?? 0), 0);
   elements.total.textContent = money.format(total);
-  elements.count.textContent = `${state.items.length} ${state.items.length === 1 ? 'Gegenstand' : 'Gegenstände'}`;
+  elements.count.textContent = `${availableItems.length} ${availableItems.length === 1 ? 'Gegenstand' : 'Gegenstände'} verfügbar`;
+  elements.soldValue.textContent = money.format(soldTotal);
+  elements.soldCount.textContent = `${soldItems.length} verkauft · Details öffnen`;
 
   state.items.forEach((item) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
     card.querySelector('.item-name').textContent = item.name;
     card.querySelector('.item-description').textContent = item.description || 'Keine Beschreibung hinterlegt.';
-    card.querySelector('.item-price').textContent = money.format(Number(item.price));
+    const displayPrice = item.sold ? Number(item.soldPrice ?? item.price) : Number(item.price);
+    card.querySelector('.item-price').textContent = item.sold ? `Verkauft: ${money.format(displayPrice)}` : money.format(displayPrice);
+    card.querySelector('.compact-price').textContent = money.format(displayPrice);
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
     if (item.image) { image.src = item.image; image.alt = `Bild von ${item.name}`; card.querySelector('.no-image').hidden = true; } else { image.hidden = true; }
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
     card.querySelector('.delete-button').addEventListener('click', () => deleteItem(item.id));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
+    card.querySelector('.item-card').classList.toggle('is-compact', state.compactView);
     elements.grid.append(card);
   });
 }
 
+function updateViewToggle() {
+  elements.compactViewButton.textContent = state.compactView ? 'Detailansicht' : 'Kompaktansicht';
+  elements.compactViewButton.setAttribute('aria-pressed', String(state.compactView));
+}
+
+function toggleCompactView() {
+  state.compactView = !state.compactView;
+  localStorage.setItem('verkaufsliste-compact-view', String(state.compactView));
+  updateViewToggle(); render();
+}
+
+function openSoldList() {
+  const soldItems = state.items.filter((item) => item.sold);
+  const total = soldItems.reduce((sum, item) => sum + Number(item.soldPrice ?? item.price ?? 0), 0);
+  elements.soldSummary.textContent = `${soldItems.length} ${soldItems.length === 1 ? 'Gegenstand' : 'Gegenstände'} · ${money.format(total)} Verkaufserlös`;
+  elements.soldList.replaceChildren();
+  if (!soldItems.length) {
+    const empty = document.createElement('div'); empty.className = 'sold-empty'; empty.textContent = 'Noch keine verkauften Gegenstände eingetragen.'; elements.soldList.append(empty);
+  } else {
+    soldItems.forEach((item) => {
+      const row = document.createElement('div'); row.className = 'sold-row';
+      const details = document.createElement('div');
+      const name = document.createElement('strong'); name.textContent = item.name;
+      const date = document.createElement('small'); date.textContent = item.soldAt ? `Verkauft am ${formatDate(item.soldAt)}` : 'Verkauft';
+      details.append(name, date);
+      const price = document.createElement('span'); price.className = 'sold-row-price'; price.textContent = money.format(Number(item.soldPrice ?? item.price ?? 0));
+      row.append(details, price); elements.soldList.append(row);
+    });
+  }
+  elements.soldBackdrop.hidden = false; lockPageScroll();
+}
+
+function closeSoldList() { elements.soldBackdrop.hidden = true; unlockPageScroll(); }
+
 function openForm(item = null) {
   elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imagePath = item?.imagePath || '';
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
+  elements.sold.checked = Boolean(item?.sold); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
@@ -77,6 +123,11 @@ function openForm(item = null) {
 }
 
 function closeForm() { elements.backdrop.hidden = true; unlockPageScroll(); }
+
+function updateSoldFields() {
+  elements.soldPriceField.hidden = !elements.sold.checked;
+  elements.soldPrice.required = elements.sold.checked;
+}
 
 function setPreview(data) {
   elements.preview.replaceChildren();
@@ -205,7 +256,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   const { data, error } = await supabaseClient.from('selling_items').select('*').order('created_at', { ascending: false });
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
   state.items = await Promise.all((data || []).map(async (row) => ({
-    id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), createdAt: row.created_at
+    id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
   })));
   render(); setSyncStatus('Synchronisiert', 'online');
 }
@@ -243,7 +294,7 @@ async function saveRemoteItem(item) {
     if (state.imagePath) await supabaseClient.storage.from(IMAGE_BUCKET).remove([state.imagePath]);
   }
   const { error } = await supabaseClient.from('selling_items').upsert({
-    id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, updated_at: new Date().toISOString()
+    id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
   }, { onConflict: 'id' });
   if (error) throw error;
 }
@@ -252,8 +303,10 @@ async function submitItem(event) {
   event.preventDefault();
   const name = elements.name.value.trim(); const price = Number(elements.price.value);
   if (!name || Number.isNaN(price) || price < 0) { elements.error.textContent = 'Bitte gib einen Namen und einen gültigen Preis ein.'; return; }
+  const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
+  if (sold && (Number.isNaN(soldPrice) || soldPrice < 0)) { elements.error.textContent = 'Bitte gib den tatsächlichen Verkaufspreis ein.'; return; }
   const existing = state.items.find((item) => item.id === elements.id.value);
-  const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, createdAt: existing?.createdAt || new Date().toISOString() };
+  const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
   elements.error.textContent = ''; state.busy = true;
   try {
     if (state.session) { await saveRemoteItem(item); await loadRemoteItems(); }
@@ -326,12 +379,17 @@ elements.image.addEventListener('change', () => {
 
 document.querySelector('#open-form-button').addEventListener('click', () => openForm());
 document.querySelector('#empty-add-button').addEventListener('click', () => openForm());
+elements.compactViewButton.addEventListener('click', toggleCompactView);
+elements.soldValueButton.addEventListener('click', openSoldList);
+document.querySelector('#close-sold-button').addEventListener('click', closeSoldList);
+elements.soldBackdrop.addEventListener('click', (event) => { if (event.target === elements.soldBackdrop) closeSoldList(); });
+elements.sold.addEventListener('change', updateSoldFields);
 document.querySelector('#close-form-button').addEventListener('click', closeForm);
 document.querySelector('#cancel-form-button').addEventListener('click', closeForm);
 elements.backdrop.addEventListener('click', (event) => { if (event.target === elements.backdrop) closeForm(); });
 document.querySelector('#export-button').addEventListener('click', exportItems);
 document.querySelector('#import-input').addEventListener('change', importItems);
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); } });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); if (!elements.soldBackdrop.hidden) closeSoldList(); } });
 
 elements.authButton.addEventListener('click', async () => {
   if (!state.session) return openAuth();
@@ -348,6 +406,7 @@ elements.aiAsk.addEventListener('click', askAiQuestion);
 elements.aiApply.addEventListener('click', applyAiResult);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.session) loadRemoteItems({ silent: true }).catch(() => {}); });
 
+updateViewToggle();
 if (supabaseClient) {
   supabaseClient.auth.onAuthStateChange((_event, session) => window.setTimeout(() => handleSession(session), 0));
   supabaseClient.auth.getSession().then(({ data }) => handleSession(data.session)).catch(() => setSyncStatus('Anmeldung nicht verfügbar', 'error'));
