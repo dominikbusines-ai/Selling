@@ -1,0 +1,10 @@
+{
+  "name": "Verkaufsliste",
+  "short_name": "Verkaufsliste",
+  "lang": "de-DE",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f1ea",
+  "theme_color": "#214d40",
+  "icons": []
+}

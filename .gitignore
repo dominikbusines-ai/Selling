@@ -1,0 +1,5 @@
+# Lokale und systemgenerierte Dateien
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f1ea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Verkaufsliste" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Verkaufsliste · Meine Gegenstände</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Verkaufsliste Startseite">
+          <span class="brand-mark" aria-hidden="true">↗</span>
+          <span>Verkaufsliste</span>
+        </a>
+        <div class="topbar-actions">
+          <button class="button button-quiet" id="export-button" type="button">Exportieren</button>
+          <label class="button button-quiet import-label" for="import-input">Importieren<input id="import-input" type="file" accept="application/json" /></label>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Deine Verkaufsübersicht</p>
+          <h1 id="page-title">Weniger suchen.<br /><em>Mehr verkaufen.</em></h1>
+          <p class="hero-copy">Halte deine Gegenstände, Preise und Bilder an einem Ort fest.</p>
+        </div>
+        <div class="value-card" aria-label="Gesamtwert">
+          <span class="value-label">Gesamtwert</span>
+          <strong id="total-value">0,00&nbsp;€</strong>
+          <span class="value-caption" id="item-count">0 Gegenstände</span>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Verkaufsübersicht">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Inventar</p>
+            <h2>Deine Gegenstände</h2>
+          </div>
+          <button class="button button-primary" id="open-form-button" type="button"><span aria-hidden="true">＋</span> Gegenstand hinzufügen</button>
+        </div>
+
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon" aria-hidden="true">◇</div>
+          <h3>Noch nichts eingetragen</h3>
+          <p>Lege deinen ersten Gegenstand an – mit Bild, Preis und einer kurzen Beschreibung.</p>
+          <button class="button button-dark" id="empty-add-button" type="button">Ersten Gegenstand anlegen</button>
+        </div>
+
+        <div class="item-grid" id="item-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
+        <button class="close-button" id="close-form-button" type="button" aria-label="Dialog schließen">×</button>
+        <p class="eyebrow" id="form-eyebrow">Neuer Eintrag</p>
+        <h2 id="form-title">Gegenstand hinzufügen</h2>
+        <form id="item-form">
+          <input id="item-id" type="hidden" />
+          <div class="form-fields">
+            <label>
+              <span>Name des Gegenstands</span>
+              <input id="item-name" name="name" type="text" placeholder="z. B. Vintage Schreibtischlampe" required maxlength="80" />
+            </label>
+            <label>
+              <span>Preis in Euro</span>
+              <div class="input-with-suffix"><input id="item-price" name="price" type="number" min="0" step="0.01" placeholder="0,00" required /><span>€</span></div>
+            </label>
+            <label>
+              <span>Beschreibung <small>(optional)</small></span>
+              <textarea id="item-description" name="description" rows="4" maxlength="500" placeholder="Zustand, Maße oder wichtige Details …"></textarea>
+            </label>
+            <label class="image-upload" for="item-image">
+              <span class="upload-preview" id="upload-preview" aria-hidden="true">＋</span>
+              <span><strong>Bild hinzufügen</strong><small>JPG, PNG oder HEIC · max. 5 MB</small></span>
+              <input id="item-image" name="image" type="file" accept="image/*" />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="button button-quiet" id="cancel-form-button" type="button">Abbrechen</button>
+            <button class="button button-primary" type="submit">Eintrag speichern</button>
+          </div>
+          <p class="form-error" id="form-error" role="alert"></p>
+        </form>
+      </section>
+    </div>
+
+    <template id="item-template">
+      <article class="item-card">
+        <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span></div>
+        <div class="item-card-body">
+          <div class="item-card-topline"><h3 class="item-name"></h3><button class="more-button" type="button" aria-label="Optionen">•••</button></div>
+          <p class="item-description"></p>
+          <div class="item-card-footer"><strong class="item-price"></strong><span class="item-date"></span></div>
+          <div class="item-actions"><button class="text-button edit-button" type="button">Bearbeiten</button><button class="text-button delete-button" type="button">Löschen</button></div>
+        </div>
+      </article>
+    </template>
+    <script src="app.js"></script>
+  </body>
+</html>
