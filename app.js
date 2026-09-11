@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://kfriqckayjehbigvrnys.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq';
 const STORAGE_KEY = 'verkaufsliste-items-v1';
 const IMAGE_BUCKET = 'selling-images';
+const signedImageCache = new Map();
 const money = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const dateFormat = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const supabaseClient = window.supabase?.createClient
@@ -282,8 +283,28 @@ function imageExtension(file) {
 
 async function signedImageUrl(path) {
   if (!path || !supabaseClient) return '';
-  const { data } = await supabaseClient.storage.from(IMAGE_BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl || '';
+  const cached = signedImageCache.get(path);
+  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.url;
+  const { data } = await supabaseClient.storage.from(IMAGE_BUCKET).createSignedUrl(path, 86_400);
+  const url = data?.signedUrl || '';
+  if (url) signedImageCache.set(path, { url, expiresAt: Date.now() + 86_400_000 });
+  return url;
+}
+
+function sameRemoteItems(previousItems, nextItems) {
+  if (previousItems.length !== nextItems.length) return false;
+  return previousItems.every((item, index) => {
+    const next = nextItems[index];
+    return item.id === next.id
+      && item.name === next.name
+      && item.price === next.price
+      && item.description === next.description
+      && item.imagePath === next.imagePath
+      && item.sold === next.sold
+      && item.soldPrice === next.soldPrice
+      && item.soldAt === next.soldAt
+      && item.createdAt === next.createdAt;
+  });
 }
 
 async function loadRemoteItems({ silent = false } = {}) {
@@ -291,10 +312,14 @@ async function loadRemoteItems({ silent = false } = {}) {
   if (!silent) setSyncStatus('Synchronisiere …');
   const { data, error } = await supabaseClient.from('selling_items').select('*').order('created_at', { ascending: false });
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
-  state.items = await Promise.all((data || []).map(async (row) => ({
+  const nextItems = await Promise.all((data || []).map(async (row) => ({
     id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
   })));
-  render(); setSyncStatus('Synchronisiert', 'online');
+  if (!sameRemoteItems(state.items, nextItems)) {
+    state.items = nextItems;
+    render();
+  }
+  setSyncStatus('Synchronisiert', 'online');
 }
 
 function scheduleRemoteRefresh() {
