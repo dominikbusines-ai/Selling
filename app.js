@@ -4,7 +4,16 @@ const STORAGE_KEY = 'verkaufsliste-items-v1';
 const IMAGE_BUCKET = 'selling-images';
 const money = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const dateFormat = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
+const supabaseClient = window.supabase?.createClient
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage
+      }
+    })
+  : null;
 
 const state = {
   items: loadLocalItems(),
