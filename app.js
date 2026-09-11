@@ -32,12 +32,11 @@ const state = {
   compactView: localStorage.getItem('verkaufsliste-compact-view') === 'true',
   busy: false
 };
-let lockedScrollY = 0;
 
 const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
-  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'),
+  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
   sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
@@ -185,17 +184,13 @@ function openAuth() {
 }
 
 function lockPageScroll() {
-  lockedScrollY = window.scrollY;
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
-  document.body.style.top = `-${lockedScrollY}px`;
 }
 
 function unlockPageScroll() {
   document.documentElement.classList.remove('modal-open');
   document.body.classList.remove('modal-open');
-  document.body.style.top = '';
-  window.scrollTo(0, lockedScrollY);
 }
 
 function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
@@ -393,6 +388,7 @@ async function submitAuth(event) {
 }
 
 elements.form.addEventListener('submit', submitItem);
+elements.imageUploadButton.addEventListener('click', () => elements.image.click());
 elements.image.addEventListener('change', () => {
   const file = elements.image.files[0];
   if (!file) return;

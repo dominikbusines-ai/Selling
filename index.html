@@ -83,10 +83,10 @@
               <span>Preis in Euro</span>
               <div class="input-with-suffix"><input id="item-price" name="price" type="number" min="0" step="0.01" placeholder="0,00" required /><span>€</span></div>
             </label>
-            <label class="sold-toggle">
+            <div class="sold-toggle">
               <input id="item-sold" name="sold" type="checkbox" />
-              <span>Dieser Gegenstand wurde bereits verkauft</span>
-            </label>
+              <label for="item-sold">Verkauft</label>
+            </div>
             <label id="sold-price-field" hidden>
               <span>Verkauft für</span>
               <div class="input-with-suffix"><input id="item-sold-price" name="soldPrice" type="number" min="0" step="0.01" placeholder="0,00" /><span>€</span></div>
@@ -96,11 +96,11 @@
               <textarea id="item-description" name="description" rows="4" maxlength="500" placeholder="Zustand, Maße oder wichtige Details …"></textarea>
             </label>
             <div class="image-upload-row">
-              <label class="image-upload" for="item-image">
+              <button class="image-upload" id="image-upload-button" type="button">
                 <span class="upload-preview" id="upload-preview" aria-hidden="true">＋</span>
                 <span><strong>Bild hinzufügen</strong><small>JPG, PNG oder HEIC · max. 5 MB</small></span>
-                <input id="item-image" name="image" type="file" accept="image/*" />
-              </label>
+              </button>
+              <input class="image-file-input" id="item-image" name="image" type="file" accept="image/*" />
               <button class="remove-image-button" id="remove-image-button" type="button" hidden>Bild entfernen</button>
             </div>
           </div>
