@@ -97,11 +97,14 @@
               <span>Beschreibung <small>(optional)</small></span>
               <textarea id="item-description" name="description" rows="4" maxlength="500" placeholder="Zustand, Maße oder wichtige Details …"></textarea>
             </label>
-            <label class="image-upload" for="item-image">
-              <span class="upload-preview" id="upload-preview" aria-hidden="true">＋</span>
-              <span><strong>Bild hinzufügen</strong><small>JPG, PNG oder HEIC · max. 5 MB</small></span>
-              <input id="item-image" name="image" type="file" accept="image/*" />
-            </label>
+            <div class="image-upload-row">
+              <label class="image-upload" for="item-image">
+                <span class="upload-preview" id="upload-preview" aria-hidden="true">＋</span>
+                <span><strong>Bild hinzufügen</strong><small>JPG, PNG oder HEIC · max. 5 MB</small></span>
+                <input id="item-image" name="image" type="file" accept="image/*" />
+              </label>
+              <button class="remove-image-button" id="remove-image-button" type="button" hidden>Bild entfernen</button>
+            </div>
           </div>
           <div class="form-actions">
             <button class="button button-quiet" id="cancel-form-button" type="button">Abbrechen</button>

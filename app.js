@@ -11,7 +11,9 @@ const state = {
   session: null,
   imageData: '',
   imageFile: null,
+  imageReadPromise: null,
   imagePath: '',
+  removedImagePath: '',
   authMode: 'login',
   syncTimer: null,
   aiItemId: null,
@@ -24,7 +26,7 @@ let lockedScrollY = 0;
 const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
-  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), preview: document.querySelector('#upload-preview'),
+  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
   sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
@@ -68,7 +70,10 @@ function render() {
     card.querySelector('.item-price').textContent = item.sold ? `Verkauft: ${money.format(displayPrice)}` : money.format(displayPrice);
     card.querySelector('.compact-price').textContent = money.format(displayPrice);
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
-    if (item.image) { image.src = item.image; image.alt = `Bild von ${item.name}`; card.querySelector('.no-image').hidden = true; } else { image.hidden = true; }
+    if (item.image) {
+      image.src = item.image; image.alt = `Bild von ${item.name}`; card.querySelector('.no-image').hidden = true;
+      image.addEventListener('error', () => { image.hidden = true; const fallback = card.querySelector('.no-image'); fallback.hidden = false; fallback.textContent = 'Bild konnte nicht geladen werden'; });
+    } else { image.hidden = true; }
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
     card.querySelector('.delete-button').addEventListener('click', () => deleteItem(item.id));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
@@ -113,7 +118,7 @@ function openSoldList() {
 function closeSoldList() { elements.soldBackdrop.hidden = true; unlockPageScroll(); }
 
 function openForm(item = null) {
-  elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imagePath = item?.imagePath || '';
+  elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = item?.imagePath || ''; state.removedImagePath = '';
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
   elements.sold.checked = Boolean(item?.sold); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
@@ -131,8 +136,9 @@ function updateSoldFields() {
 
 function setPreview(data) {
   elements.preview.replaceChildren();
-  if (!data) { elements.preview.append(document.createTextNode('＋')); return; }
-  const image = document.createElement('img'); image.src = data; image.alt = 'Vorschau'; elements.preview.append(image);
+  if (!data) elements.preview.append(document.createTextNode('＋'));
+  else { const image = document.createElement('img'); image.src = data; image.alt = 'Vorschau'; elements.preview.append(image); }
+  elements.removeImage.hidden = !Boolean(data || state.imagePath);
 }
 
 function setAuthMessage(message, success = false) {
@@ -292,6 +298,9 @@ async function saveRemoteItem(item) {
   if (state.imageFile) {
     imagePath = await uploadImage(item.id, state.imageFile);
     if (state.imagePath) await supabaseClient.storage.from(IMAGE_BUCKET).remove([state.imagePath]);
+  } else if (state.removedImagePath) {
+    await supabaseClient.storage.from(IMAGE_BUCKET).remove([state.removedImagePath]);
+    imagePath = null;
   }
   const { error } = await supabaseClient.from('selling_items').upsert({
     id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
@@ -301,6 +310,8 @@ async function saveRemoteItem(item) {
 
 async function submitItem(event) {
   event.preventDefault();
+  try { if (state.imageReadPromise) await state.imageReadPromise; }
+  catch (error) { elements.error.textContent = error.message || 'Das Bild konnte nicht gelesen werden.'; return; }
   const name = elements.name.value.trim(); const price = Number(elements.price.value);
   if (!name || Number.isNaN(price) || price < 0) { elements.error.textContent = 'Bitte gib einen Namen und einen gültigen Preis ein.'; return; }
   const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
@@ -374,7 +385,16 @@ elements.image.addEventListener('change', () => {
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { elements.error.textContent = 'Das Bild darf höchstens 5 MB groß sein.'; elements.image.value = ''; return; }
   state.imageFile = file;
-  const reader = new FileReader(); reader.addEventListener('load', () => { state.imageData = reader.result; setPreview(state.imageData); }); reader.readAsDataURL(file);
+  state.imageReadPromise = new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => { state.imageData = reader.result; setPreview(state.imageData); resolve(reader.result); });
+    reader.addEventListener('error', () => reject(new Error('Das Bild konnte nicht gelesen werden.')));
+    reader.readAsDataURL(file);
+  });
+});
+elements.removeImage.addEventListener('click', () => {
+  if (state.imagePath) state.removedImagePath = state.imagePath;
+  state.imageData = ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = ''; elements.image.value = ''; setPreview('');
 });
 
 document.querySelector('#open-form-button').addEventListener('click', () => openForm());
