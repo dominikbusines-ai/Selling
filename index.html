@@ -19,6 +19,8 @@
           <span>Verkaufsliste</span>
         </a>
         <div class="topbar-actions">
+          <span class="sync-status" id="sync-status" aria-live="polite">Lokaler Speicher</span>
+          <button class="button button-quiet" id="auth-button" type="button">Anmelden</button>
           <button class="button button-quiet" id="export-button" type="button">Exportieren</button>
           <label class="button button-quiet import-label" for="import-input">Importieren<input id="import-input" type="file" accept="application/json" /></label>
         </div>
@@ -92,6 +94,28 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="auth-backdrop" hidden>
+      <section class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button class="close-button" id="close-auth-button" type="button" aria-label="Anmeldedialog schließen">×</button>
+        <p class="eyebrow" id="auth-eyebrow">Deine Daten überall</p>
+        <h2 id="auth-title">Anmelden</h2>
+        <p class="auth-intro" id="auth-intro">Melde dich an, damit deine Verkaufsgegenstände auf PC und iPhone synchron bleiben.</p>
+        <form id="auth-form">
+          <label>
+            <span>E-Mail-Adresse</span>
+            <input id="auth-email" type="email" autocomplete="email" placeholder="du@beispiel.de" required />
+          </label>
+          <label>
+            <span>Passwort</span>
+            <input id="auth-password" type="password" autocomplete="current-password" placeholder="Mindestens 6 Zeichen" minlength="6" required />
+          </label>
+          <button class="button button-primary auth-submit" id="auth-submit" type="submit">Anmelden</button>
+          <p class="form-error" id="auth-error" role="alert"></p>
+        </form>
+        <button class="auth-switch" id="auth-switch" type="button">Noch kein Konto? Jetzt registrieren</button>
+      </section>
+    </div>
+
     <template id="item-template">
       <article class="item-card">
         <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span></div>
@@ -103,6 +127,7 @@
         </div>
       </article>
     </template>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>
