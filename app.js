@@ -27,6 +27,8 @@ const state = {
   syncTimer: null,
   aiItemId: null,
   aiResult: '',
+  aiTask: '',
+  aiRecommendedPrice: null,
   compactView: localStorage.getItem('verkaufsliste-compact-view') === 'true',
   busy: false
 };
@@ -73,6 +75,7 @@ function render() {
   state.items.forEach((item) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
+    const imageWrap = card.querySelector('.item-image-wrap');
     card.querySelector('.item-name').textContent = item.name;
     card.querySelector('.item-description').textContent = item.description || 'Keine Beschreibung hinterlegt.';
     const displayPrice = item.sold ? Number(item.soldPrice ?? item.price) : Number(item.price);
@@ -88,6 +91,15 @@ function render() {
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
     card.querySelector('.item-card').classList.toggle('is-compact', state.compactView);
+    if (state.compactView) {
+      imageWrap.tabIndex = 0;
+      imageWrap.setAttribute('role', 'button');
+      imageWrap.setAttribute('aria-label', `${item.name} bearbeiten`);
+      imageWrap.addEventListener('click', () => openForm(item));
+      imageWrap.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openForm(item); }
+      });
+    }
     elements.grid.append(card);
   });
 }
@@ -189,16 +201,16 @@ function unlockPageScroll() {
 function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
 
 const AI_TASKS = {
-  'write-description': 'Schreibe eine überzeugende, ehrliche Verkaufsbeschreibung auf Deutsch. Erfinde keine fehlenden Produktdetails. Formuliere sie als direkt nutzbaren Fließtext.',
-  'improve-description': 'Verbessere die vorhandene Verkaufsbeschreibung auf Deutsch. Erhalte alle gesicherten Angaben, mache sie klarer und ansprechender und erfinde keine Fakten.',
-  'price-recommendation': 'Gib eine realistische Preisempfehlung in Euro für dieses Produkt. Begründe die Einschätzung kurz, nenne bei Unsicherheit eine Preisspanne und weise darauf hin, dass es sich um eine Schätzung handelt.'
+  'write-description': 'Schreibe 3 bis 5 kurze, produktspezifische Stichpunkte auf Deutsch. Verwende nur gesicherte Angaben aus Produktname, Beschreibung und eindeutig sichtbaren Bildmerkmalen. Erfinde keine Details und vermeide allgemeine Werbesätze.',
+  'improve-description': 'Verbessere die vorhandene Beschreibung zu 3 bis 5 kurzen, präzisen Stichpunkten. Bewahre gesicherte Produktdetails, entferne allgemeine Aussagen und erfinde nichts.',
+  'price-recommendation': 'Gib eine realistische Preisempfehlung in Euro für dieses Produkt und liefere einen eindeutig übernehmbaren Preis. Begründe die Einschätzung kurz, nenne bei Unsicherheit eine Preisspanne und weise darauf hin, dass es sich um eine Schätzung handelt.'
 };
 
 function openAi(item) {
-  state.aiItemId = item.id; state.aiResult = '';
+  state.aiItemId = item.id; state.aiResult = ''; state.aiTask = ''; state.aiRecommendedPrice = null;
   elements.aiTitle.textContent = `KI-Assistent: ${item.name}`;
   elements.aiContext.textContent = `Aktueller Preis: ${money.format(Number(item.price || 0))} · Beschreibung: ${item.description || 'keine Beschreibung hinterlegt'}`;
-  elements.aiQuestion.value = ''; elements.aiResult.textContent = ''; elements.aiResultWrap.hidden = true; elements.aiError.textContent = '';
+  elements.aiQuestion.value = ''; elements.aiResult.textContent = ''; elements.aiResultWrap.hidden = true; elements.aiApply.hidden = true; elements.aiError.textContent = '';
   elements.aiBackdrop.hidden = false; lockPageScroll();
 }
 
@@ -221,12 +233,21 @@ async function requestAi(task, question = '') {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'Die KI-Anfrage konnte nicht verarbeitet werden.');
-  return result.text || '';
+  return { text: result.text || '', recommendedPrice: typeof result.recommendedPrice === 'number' ? result.recommendedPrice : null };
 }
 
 async function runAiTask(task) {
   elements.aiError.textContent = ''; setAiBusy(true);
-  try { state.aiResult = await requestAi(task); elements.aiResult.textContent = state.aiResult; elements.aiResultWrap.hidden = false; }
+  try {
+    const result = await requestAi(task);
+    state.aiTask = task; state.aiResult = result.text; state.aiRecommendedPrice = result.recommendedPrice;
+    elements.aiResult.textContent = task === 'price-recommendation' && result.recommendedPrice != null
+      ? `Empfohlener Preis: ${money.format(result.recommendedPrice)}\n\n${result.text}`
+      : result.text;
+    elements.aiApply.textContent = task === 'price-recommendation' ? 'Preis übernehmen' : 'Als Beschreibung übernehmen';
+    elements.aiApply.hidden = task === 'price-recommendation' ? result.recommendedPrice == null : false;
+    elements.aiResultWrap.hidden = false;
+  }
   catch (error) { elements.aiError.textContent = error.message; }
   finally { setAiBusy(false); }
 }
@@ -235,21 +256,26 @@ async function askAiQuestion() {
   const question = elements.aiQuestion.value.trim();
   if (!question) { elements.aiError.textContent = 'Bitte gib zuerst eine Frage ein.'; return; }
   elements.aiError.textContent = ''; setAiBusy(true);
-  try { state.aiResult = await requestAi('custom', question); elements.aiResult.textContent = state.aiResult; elements.aiResultWrap.hidden = false; }
+  try {
+    const result = await requestAi('custom', question);
+    state.aiTask = 'custom'; state.aiResult = result.text; state.aiRecommendedPrice = null;
+    elements.aiResult.textContent = result.text; elements.aiApply.hidden = true; elements.aiResultWrap.hidden = false;
+  }
   catch (error) { elements.aiError.textContent = error.message; }
   finally { setAiBusy(false); }
 }
 
 async function applyAiResult() {
-  if (!state.aiResult || !state.aiItemId) return;
+  if (!state.aiItemId || (!state.aiResult && state.aiRecommendedPrice == null)) return;
   const item = state.items.find((entry) => entry.id === state.aiItemId);
   if (!item) return;
-  const updated = { ...item, description: state.aiResult };
+  const appliesPrice = state.aiTask === 'price-recommendation' && state.aiRecommendedPrice != null;
+  const updated = appliesPrice ? { ...item, price: state.aiRecommendedPrice } : { ...item, description: state.aiResult };
   try {
-    if (state.session) { state.imagePath = item.imagePath || ''; state.imageFile = null; await saveRemoteItem(updated); await loadRemoteItems(); }
+    if (state.session) { state.imagePath = item.imagePath || ''; state.imageFile = null; state.removedImagePath = ''; await saveRemoteItem(updated); await loadRemoteItems(); }
     else { state.items = state.items.map((entry) => entry.id === updated.id ? updated : entry); saveLocalItems(); render(); }
     closeAi();
-  } catch (error) { elements.aiError.textContent = error.message || 'Die Beschreibung konnte nicht übernommen werden.'; }
+  } catch (error) { elements.aiError.textContent = error.message || 'Die Änderung konnte nicht übernommen werden.'; }
 }
 
 function newId() { return window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
@@ -366,28 +392,6 @@ async function submitAuth(event) {
   finally { elements.authSubmit.disabled = false; }
 }
 
-async function exportItems() {
-  const exportData = state.items.map(({ image, ...item }) => ({ ...item, image: image?.startsWith('data:') ? image : '' }));
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `verkaufsliste-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(link.href);
-}
-
-async function importItems(event) {
-  const file = event.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.addEventListener('load', async () => {
-    try {
-      const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported) || imported.some((item) => !item.name || typeof item.price !== 'number')) throw new Error();
-      if (state.session) {
-        for (const importedItem of imported) await saveRemoteItem({ ...importedItem, id: importedItem.id || newId(), imagePath: '' });
-        await loadRemoteItems();
-      } else { state.items = imported; saveLocalItems(); render(); }
-    } catch { window.alert('Die Datei konnte nicht importiert werden.'); }
-    event.target.value = '';
-  }); reader.readAsText(file);
-}
-
 elements.form.addEventListener('submit', submitItem);
 elements.image.addEventListener('change', () => {
   const file = elements.image.files[0];
@@ -416,8 +420,6 @@ elements.sold.addEventListener('change', updateSoldFields);
 document.querySelector('#close-form-button').addEventListener('click', closeForm);
 document.querySelector('#cancel-form-button').addEventListener('click', closeForm);
 elements.backdrop.addEventListener('click', (event) => { if (event.target === elements.backdrop) closeForm(); });
-document.querySelector('#export-button').addEventListener('click', exportItems);
-document.querySelector('#import-input').addEventListener('change', importItems);
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); if (!elements.soldBackdrop.hidden) closeSoldList(); } });
 
 elements.authButton.addEventListener('click', async () => {

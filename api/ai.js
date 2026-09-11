@@ -4,9 +4,9 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
 
 const taskInstructions = {
-  'write-description': 'Schreibe eine überzeugende, ehrliche Verkaufsbeschreibung auf Deutsch. Erfinde keine fehlenden Produktdetails. Formuliere direkt nutzbaren Fließtext ohne Überschrift.',
-  'improve-description': 'Verbessere die vorhandene Verkaufsbeschreibung auf Deutsch. Erhalte alle gesicherten Angaben, mache sie klarer und ansprechender und erfinde keine Fakten. Formuliere direkt nutzbaren Fließtext ohne Überschrift.',
-  'price-recommendation': 'Gib eine realistische Preisempfehlung in Euro. Begründe die Einschätzung kurz, nenne bei Unsicherheit eine Preisspanne und stelle klar, dass es nur eine Schätzung ist.',
+  'write-description': 'Schreibe eine kurze Verkaufsbeschreibung mit 3 bis 5 präzisen Stichpunkten auf Deutsch. Jeder Stichpunkt muss konkret zu diesem Gegenstand passen. Verwende ausschließlich Angaben aus Produktname, vorhandener Beschreibung oder eindeutig sichtbare Merkmale des beigefügten Produktbilds. Erfinde keine Marke, Ausführung, Funktion, technische Daten, Maße oder Zustandsangaben. Keine Überschrift, keine Einleitung und keine allgemeinen Werbesätze.',
+  'improve-description': 'Überarbeite die vorhandene Beschreibung zu 3 bis 5 kurzen, präzisen Stichpunkten auf Deutsch. Bewahre alle gesicherten produktspezifischen Angaben und entferne Wiederholungen sowie allgemeine Werbesätze. Ergänze nur Merkmale, die auf dem beigefügten Produktbild eindeutig erkennbar sind. Erfinde keine Marke, Ausführung, Funktion, technische Daten, Maße oder Zustandsangaben. Keine Überschrift und keine Einleitung.',
+  'price-recommendation': 'Gib eine realistische Preisempfehlung in Euro. Die erste Zeile muss exakt das Format PREIS_EUR: 1250,00 verwenden, ohne Tausendertrennzeichen. Begründe die Einschätzung danach kurz, nenne bei Unsicherheit zusätzlich eine Preisspanne und stelle klar, dass es nur eine Schätzung ist.',
   custom: 'Beantworte die eigene Frage konkret auf Grundlage der Produktdaten. Wenn Informationen fehlen, sage das offen und erfinde nichts.'
 };
 
@@ -89,15 +89,23 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 900,
-        system: 'Du bist ein sachlicher Verkaufsassistent für eine private Verkaufsübersicht. Antworte auf Deutsch, bleibe ehrlich und erfinde keine Produktmerkmale, Zustände oder Marktpreise.',
+        system: 'Du bist ein sachlicher Verkaufsassistent für eine private Verkaufsübersicht. Antworte auf Deutsch und beziehe dich ausschließlich auf den konkret übergebenen Gegenstand. Vermeide austauschbare Standardtexte und unbelegte Werbeaussagen. Nenne nur Informationen, die in den Produktdaten stehen oder auf dem beigefügten Bild eindeutig erkennbar sind. Erfinde keine Produktmerkmale, Zustände oder Marktpreise.',
         messages: [{ role: 'user', content }]
       })
     });
     const data = await response.json();
     if (!response.ok) return sendJson(res, response.status >= 500 ? 502 : response.status, { error: data?.error?.message || 'Anthropic konnte die Anfrage nicht verarbeiten.' });
-    const text = (data.content || []).filter((block) => block.type === 'text').map((block) => block.text).join('\n').trim();
+    let text = (data.content || []).filter((block) => block.type === 'text').map((block) => block.text).join('\n').trim();
     if (!text) return sendJson(res, 502, { error: 'Die KI hat keine Textantwort geliefert.' });
-    return sendJson(res, 200, { text, model: MODEL });
+    let recommendedPrice = null;
+    if (task === 'price-recommendation') {
+      const priceMatch = text.match(/PREIS_EUR\s*:\s*([0-9]+(?:[.,][0-9]{1,2})?)/i);
+      if (priceMatch) {
+        recommendedPrice = Number(priceMatch[1].replace(',', '.'));
+        text = text.replace(/^.*PREIS_EUR\s*:[^\n]*(?:\n|$)/im, '').trim();
+      }
+    }
+    return sendJson(res, 200, { text, recommendedPrice, model: MODEL });
   } catch (error) {
     return sendJson(res, 502, { error: error.message || 'Die KI ist momentan nicht erreichbar.' });
   }

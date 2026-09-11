@@ -10,7 +10,6 @@ Der Ordner ist als vollständiges statisches GitHub-/Vercel-Projekt vorbereitet.
 - Gesamtwert automatisch berechnen
 - Einträge bearbeiten oder löschen
 - Daten lokal speichern oder nach Anmeldung automatisch mit Supabase synchronisieren
-- JSON-Export und -Import für die Übertragung zwischen Geräten
 - Mobile Darstellung mit iPhone-Safe-Area-Unterstützung
 - KI-Assistent für Beschreibung, Verbesserung, Preisempfehlung und eigene Fragen
 - Verkaufsstatus mit tatsächlichem Verkaufspreis und Verkaufsübersicht
