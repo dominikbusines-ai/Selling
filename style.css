@@ -42,6 +42,8 @@ button { cursor: pointer; }
 .button-quiet:hover { background: var(--white); }
 .button-danger { margin-right: auto; border: 1px solid #d9a79b; color: #963f34; background: #fff5f2; }
 .button-danger:hover { border-color: #bd6d5b; background: #ffebe6; }
+.button-ai { border: 1px solid #b9d3c5; color: var(--green); background: #eef6f0; }
+.button-ai:hover { border-color: var(--green); background: #e2f0e7; }
 .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; padding: 84px 0 72px; }
 .eyebrow { margin: 0 0 14px; color: var(--coral); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; }
@@ -121,6 +123,7 @@ textarea { resize: vertical; }
 .image-upload strong, .image-upload small { display: block; }
 .image-upload strong { margin-bottom: 3px; font-size: 13px; }
 .image-upload-row { display: grid; gap: 7px; }
+.form-ai-button { width: 100%; margin-top: 2px; }
 .remove-image-button { position: relative; z-index: 2; justify-self: stretch; min-height: 44px; padding: 10px 13px; border: 1px solid #e4b9ae; border-radius: 7px; color: #963f34; background: #fff5f2; font-size: 13px; font-weight: 600; text-align: center; touch-action: manipulation; }
 .remove-image-button:hover { border-color: #c87564; background: #ffebe6; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 27px; }

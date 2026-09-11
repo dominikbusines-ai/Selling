@@ -27,17 +27,20 @@ const state = {
   authMode: 'login',
   syncTimer: null,
   aiItemId: null,
+  aiProduct: null,
   aiResult: '',
   aiTask: '',
   aiRecommendedPrice: null,
+  aiReturnToForm: false,
   compactView: localStorage.getItem('verkaufsliste-compact-view') === 'true',
+  editingItemId: '',
   busy: false
 };
 
 const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
-  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'),
+  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'), formAi: document.querySelector('#open-ai-from-form'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
   sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
@@ -139,16 +142,18 @@ function closeSoldList() { elements.soldBackdrop.hidden = true; unlockPageScroll
 
 function openForm(item = null) {
   elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = item?.imagePath || ''; state.removedImagePath = '';
+  state.editingItemId = item?.id || '';
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
   elements.sold.checked = Boolean(item?.sold); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
   elements.deleteItem.hidden = !item;
+  elements.formAi.hidden = !item;
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   requestAnimationFrame(() => elements.name.focus());
 }
 
-function closeForm() { elements.backdrop.hidden = true; unlockPageScroll(); }
+function closeForm() { elements.backdrop.hidden = true; state.editingItemId = ''; if (elements.aiBackdrop.hidden) unlockPageScroll(); }
 
 function updateSoldFields() {
   elements.soldPriceField.hidden = !elements.sold.checked;
@@ -203,6 +208,8 @@ const AI_TASKS = {
 };
 
 function openAi(item) {
+  state.aiReturnToForm = !elements.backdrop.hidden && state.editingItemId === item.id;
+  state.aiProduct = item;
   state.aiItemId = item.id; state.aiResult = ''; state.aiTask = ''; state.aiRecommendedPrice = null;
   elements.aiTitle.textContent = `KI-Assistent: ${item.name}`;
   elements.aiContext.textContent = `Aktueller Preis: ${money.format(Number(item.price || 0))} · Beschreibung: ${item.description || 'keine Beschreibung hinterlegt'}`;
@@ -210,7 +217,7 @@ function openAi(item) {
   elements.aiBackdrop.hidden = false; lockPageScroll();
 }
 
-function closeAi() { elements.aiBackdrop.hidden = true; unlockPageScroll(); }
+function closeAi() { elements.aiBackdrop.hidden = true; if (elements.backdrop.hidden) unlockPageScroll(); }
 
 function setAiBusy(busy) {
   elements.aiAsk.disabled = busy;
@@ -220,7 +227,7 @@ function setAiBusy(busy) {
 
 async function requestAi(task, question = '') {
   if (!state.session) throw new Error('Bitte melde dich zuerst an, damit die KI sicher verwendet werden kann.');
-  const item = state.items.find((entry) => entry.id === state.aiItemId);
+  const item = state.aiProduct || state.items.find((entry) => entry.id === state.aiItemId);
   if (!item) throw new Error('Der ausgewählte Gegenstand ist nicht mehr verfügbar.');
   const response = await fetch('/api/ai', {
     method: 'POST',
@@ -267,6 +274,12 @@ async function applyAiResult() {
   if (!item) return;
   const appliesPrice = state.aiTask === 'price-recommendation' && state.aiRecommendedPrice != null;
   const updated = appliesPrice ? { ...item, price: state.aiRecommendedPrice } : { ...item, description: state.aiResult };
+  if (state.aiReturnToForm) {
+    if (appliesPrice) elements.price.value = String(state.aiRecommendedPrice);
+    else elements.description.value = state.aiResult;
+    closeAi();
+    return;
+  }
   try {
     if (state.session) { state.imagePath = item.imagePath || ''; state.imageFile = null; state.removedImagePath = ''; await saveRemoteItem(updated); await loadRemoteItems(); }
     else { state.items = state.items.map((entry) => entry.id === updated.id ? updated : entry); saveLocalItems(); render(); }
@@ -443,6 +456,18 @@ elements.soldBackdrop.addEventListener('click', (event) => { if (event.target ==
 elements.sold.addEventListener('change', updateSoldFields);
 document.querySelector('#close-form-button').addEventListener('click', closeForm);
 document.querySelector('#cancel-form-button').addEventListener('click', closeForm);
+elements.formAi.addEventListener('click', () => {
+  const savedItem = state.items.find((entry) => entry.id === state.editingItemId);
+  if (!savedItem) return;
+  openAi({
+    ...savedItem,
+    name: elements.name.value.trim() || savedItem.name,
+    price: Number(elements.price.value) || savedItem.price,
+    description: elements.description.value.trim(),
+    image: state.imageData,
+    imagePath: state.imagePath
+  });
+});
 elements.deleteItem.addEventListener('click', () => {
   if (!state.busy && elements.id.value) deleteItem(elements.id.value);
 });
