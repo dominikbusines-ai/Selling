@@ -16,6 +16,7 @@ const state = {
   syncTimer: null,
   busy: false
 };
+let lockedScrollY = 0;
 
 const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
@@ -67,11 +68,11 @@ function openForm(item = null) {
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
-  setPreview(state.imageData); elements.backdrop.hidden = false; document.body.style.overflow = 'hidden';
+  setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   requestAnimationFrame(() => elements.name.focus());
 }
 
-function closeForm() { elements.backdrop.hidden = true; document.body.style.overflow = ''; }
+function closeForm() { elements.backdrop.hidden = true; unlockPageScroll(); }
 
 function setPreview(data) {
   elements.preview.replaceChildren();
@@ -97,11 +98,25 @@ function setAuthMode(mode) {
 }
 
 function openAuth() {
-  setAuthMode('login'); elements.authForm.reset(); elements.authBackdrop.hidden = false; document.body.style.overflow = 'hidden';
+  setAuthMode('login'); elements.authForm.reset(); elements.authBackdrop.hidden = false; lockPageScroll();
   requestAnimationFrame(() => elements.authEmail.focus());
 }
 
-function closeAuth() { elements.authBackdrop.hidden = true; document.body.style.overflow = ''; }
+function lockPageScroll() {
+  lockedScrollY = window.scrollY;
+  document.documentElement.classList.add('modal-open');
+  document.body.classList.add('modal-open');
+  document.body.style.top = `-${lockedScrollY}px`;
+}
+
+function unlockPageScroll() {
+  document.documentElement.classList.remove('modal-open');
+  document.body.classList.remove('modal-open');
+  document.body.style.top = '';
+  window.scrollTo(0, lockedScrollY);
+}
+
+function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
 
 function newId() { return window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 

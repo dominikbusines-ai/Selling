@@ -77,9 +77,11 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .text-button:hover { color: var(--ink); }
 .delete-button:hover { color: #ad4c3e; }
 
-.modal-backdrop { position: fixed; z-index: 5; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(35, 37, 34, .42); backdrop-filter: blur(5px); }
+.modal-backdrop { position: fixed; z-index: 5; inset: 0; display: grid; place-items: center; padding: 24px; overscroll-behavior: contain; background: rgba(35, 37, 34, .42); backdrop-filter: blur(5px); }
 .modal-backdrop[hidden] { display: none; }
-.modal { position: relative; width: min(100%, 530px); max-height: calc(100vh - 48px); overflow: auto; padding: 32px; border-radius: 13px; background: var(--white); box-shadow: 0 25px 70px rgba(28, 25, 19, .22); }
+.modal { position: relative; width: min(100%, 530px); max-height: calc(100vh - 48px); overflow: auto; overscroll-behavior: contain; padding: 32px; border-radius: 13px; background: var(--white); box-shadow: 0 25px 70px rgba(28, 25, 19, .22); }
+.modal-open { overflow: hidden !important; }
+body.modal-open { position: fixed; width: 100%; }
 .close-button { position: absolute; top: 19px; right: 21px; width: 32px; height: 32px; border: 0; border-radius: 50%; color: var(--muted); background: var(--paper); font-size: 22px; line-height: 1; }
 .modal h2 { margin-bottom: 26px; }
 .form-fields { display: grid; gap: 17px; }
