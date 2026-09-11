@@ -33,12 +33,15 @@ button { cursor: pointer; }
 .sync-status.is-online { color: var(--green); }
 .sync-status.is-error { color: #ad4c3e; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 7px; color: var(--ink); font-weight: 600; font-size: 13px; transition: .2s ease; }
+.button[hidden] { display: none; }
 .button:hover { transform: translateY(-1px); }
 .button-primary { color: var(--white); background: var(--green); box-shadow: 0 7px 15px rgba(33, 77, 64, .16); }
 .button-primary:hover { background: var(--green-dark); }
 .button-dark { color: var(--white); background: var(--ink); }
 .button-quiet { border: 1px solid var(--line); background: transparent; }
 .button-quiet:hover { background: var(--white); }
+.button-danger { margin-right: auto; border: 1px solid #d9a79b; color: #963f34; background: #fff5f2; }
+.button-danger:hover { border-color: #bd6d5b; background: #ffebe6; }
 .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; padding: 84px 0 72px; }
 .eyebrow { margin: 0 0 14px; color: var(--coral); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; }
@@ -89,7 +92,6 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-actions { display: flex; justify-content: flex-end; gap: 13px; margin-top: 15px; }
 .text-button { padding: 0; border: 0; color: var(--muted); background: transparent; font-size: 12px; }
 .text-button:hover { color: var(--ink); }
-.delete-button:hover { color: #ad4c3e; }
 .ai-button { margin-right: auto; padding: 5px 9px; border: 1px solid #b9d3c5; border-radius: 5px; color: var(--green); background: #eef6f0; font-size: 11px; font-weight: 700; }
 .ai-button:hover { border-color: var(--green); background: #e2f0e7; }
 
@@ -181,4 +183,5 @@ textarea { resize: vertical; }
   .modal { max-height: 92vh; max-height: 92dvh; padding: 28px 20px calc(22px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; }
   .form-actions { position: static; margin-top: 22px; padding-top: 0; background: var(--white); }
   .form-actions .button { flex: 1; }
+  .form-actions .button-danger { margin-right: 0; }
 }

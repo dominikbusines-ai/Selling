@@ -36,7 +36,7 @@ const state = {
 const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
-  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'),
+  id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
   sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
@@ -86,7 +86,6 @@ function render() {
       image.addEventListener('error', () => { image.hidden = true; const fallback = card.querySelector('.no-image'); fallback.hidden = false; fallback.textContent = 'Bild konnte nicht geladen werden'; });
     } else { image.hidden = true; }
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
-    card.querySelector('.delete-button').addEventListener('click', () => deleteItem(item.id));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
     card.querySelector('.item-card').classList.toggle('is-compact', state.compactView);
@@ -143,6 +142,7 @@ function openForm(item = null) {
   elements.sold.checked = Boolean(item?.sold); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
+  elements.deleteItem.hidden = !item;
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   requestAnimationFrame(() => elements.name.focus());
 }
@@ -360,6 +360,7 @@ async function submitItem(event) {
 async function deleteItem(id) {
   const item = state.items.find((entry) => entry.id === id);
   if (!item || !window.confirm(`„${item.name}“ wirklich löschen?`)) return;
+  elements.error.textContent = ''; state.busy = true; elements.deleteItem.disabled = true;
   try {
     if (state.session) {
       const { error } = await supabaseClient.from('selling_items').delete().eq('id', id);
@@ -367,7 +368,9 @@ async function deleteItem(id) {
       if (item.imagePath) await supabaseClient.storage.from(IMAGE_BUCKET).remove([item.imagePath]);
       await loadRemoteItems();
     } else { state.items = state.items.filter((entry) => entry.id !== id); saveLocalItems(); render(); }
-  } catch (error) { window.alert(error.message || 'Der Eintrag konnte nicht gelöscht werden.'); }
+    closeForm();
+  } catch (error) { elements.error.textContent = error.message || 'Der Eintrag konnte nicht gelöscht werden.'; }
+  finally { state.busy = false; elements.deleteItem.disabled = false; }
 }
 
 async function submitAuth(event) {
@@ -415,6 +418,9 @@ elements.soldBackdrop.addEventListener('click', (event) => { if (event.target ==
 elements.sold.addEventListener('change', updateSoldFields);
 document.querySelector('#close-form-button').addEventListener('click', closeForm);
 document.querySelector('#cancel-form-button').addEventListener('click', closeForm);
+elements.deleteItem.addEventListener('click', () => {
+  if (!state.busy && elements.id.value) deleteItem(elements.id.value);
+});
 elements.backdrop.addEventListener('click', (event) => { if (event.target === elements.backdrop) closeForm(); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); if (!elements.soldBackdrop.hidden) closeSoldList(); } });
 
