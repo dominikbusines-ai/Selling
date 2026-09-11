@@ -116,6 +116,28 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="ai-backdrop" hidden>
+      <section class="modal ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">
+        <button class="close-button" id="close-ai-button" type="button" aria-label="KI-Dialog schließen">×</button>
+        <p class="eyebrow">Dein Verkaufsassistent</p>
+        <h2 id="ai-title">KI-Assistent</h2>
+        <p class="ai-product-context" id="ai-product-context"></p>
+        <div class="ai-actions" aria-label="Vorgefertigte KI-Aufgaben">
+          <button class="ai-action" type="button" data-ai-action="write-description">Beschreibung schreiben</button>
+          <button class="ai-action" type="button" data-ai-action="improve-description">Beschreibung verbessern</button>
+          <button class="ai-action" type="button" data-ai-action="price-recommendation">Preisempfehlung geben</button>
+        </div>
+        <label class="ai-question-label" for="ai-question">Eigene Frage</label>
+        <textarea id="ai-question" rows="3" maxlength="2000" placeholder="z. B. Welche Informationen fehlen noch in meiner Beschreibung?"></textarea>
+        <button class="button button-primary ai-ask-button" id="ai-ask-button" type="button">Frage an die KI senden</button>
+        <div class="ai-result-wrap" id="ai-result-wrap" hidden>
+          <div class="ai-result-heading"><strong>Antwort</strong><button class="text-button" id="ai-apply-button" type="button">Als Beschreibung übernehmen</button></div>
+          <div class="ai-result" id="ai-result"></div>
+        </div>
+        <p class="form-error" id="ai-error" role="alert"></p>
+      </section>
+    </div>
+
     <template id="item-template">
       <article class="item-card">
         <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span></div>
@@ -123,7 +145,7 @@
           <div class="item-card-topline"><h3 class="item-name"></h3><button class="more-button" type="button" aria-label="Optionen">•••</button></div>
           <p class="item-description"></p>
           <div class="item-card-footer"><strong class="item-price"></strong><span class="item-date"></span></div>
-          <div class="item-actions"><button class="text-button edit-button" type="button">Bearbeiten</button><button class="text-button delete-button" type="button">Löschen</button></div>
+          <div class="item-actions"><button class="ai-button" type="button">KI-Assistent</button><button class="text-button edit-button" type="button">Bearbeiten</button><button class="text-button delete-button" type="button">Löschen</button></div>
         </div>
       </article>
     </template>

@@ -12,6 +12,7 @@ Der Ordner ist als vollständiges statisches GitHub-/Vercel-Projekt vorbereitet.
 - Daten lokal speichern oder nach Anmeldung automatisch mit Supabase synchronisieren
 - JSON-Export und -Import für die Übertragung zwischen Geräten
 - Mobile Darstellung mit iPhone-Safe-Area-Unterstützung
+- KI-Assistent für Beschreibung, Verbesserung, Preisempfehlung und eigene Fragen
 
 ## Starten
 
@@ -26,3 +27,17 @@ Den gesamten Inhalt dieses Ordners nach `C:\Users\Kunde\Projekte\Selling` kopier
 ## Über Vercel veröffentlichen
 
 In Vercel das GitHub-Repository importieren. Als Framework-Preset kann **Other** beziehungsweise **No Framework** verwendet werden. Build Command und Output Directory bleiben leer. Vercel liefert anschließend die `index.html` direkt aus.
+
+## Anthropic-KI in Vercel
+
+In Vercel unter **Settings → Environment Variables** diese Variable als **Secret** für Production, Preview und Development hinterlegen:
+
+```text
+ANTHROPIC_API_KEY
+```
+
+Der Wert ist der persönliche Anthropic-API-Key. Er wird ausschließlich in `api/ai.js` auf dem Server verwendet und nie an den Browser ausgeliefert. Die KI-Funktionen stehen nur angemeldeten Benutzern zur Verfügung.
+
+Für die KI-Anfrage werden die Daten des ausgewählten Gegenstands und – falls vorhanden – sein Bild an Anthropic übertragen. Die voreingestellten Aufgaben sind Beschreibung schreiben, Beschreibung verbessern und Preisempfehlung; zusätzlich kann eine eigene Frage gestellt werden.
+
+Die optionalen öffentlichen Variablen `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` sind in `.env.example` dokumentiert. Sie müssen nicht angelegt werden, wenn die bereits im Projekt hinterlegten öffentlichen Werte verwendet werden.

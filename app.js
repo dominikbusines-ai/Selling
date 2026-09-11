@@ -14,6 +14,8 @@ const state = {
   imagePath: '',
   authMode: 'login',
   syncTimer: null,
+  aiItemId: null,
+  aiResult: '',
   busy: false
 };
 let lockedScrollY = 0;
@@ -22,7 +24,8 @@ const elements = {
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
   id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), preview: document.querySelector('#upload-preview'),
-  syncStatus: document.querySelector('#sync-status'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch')
+  syncStatus: document.querySelector('#sync-status'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
+  aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error')
 };
 
 function loadLocalItems() {
@@ -59,6 +62,7 @@ function render() {
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
     card.querySelector('.delete-button').addEventListener('click', () => deleteItem(item.id));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
+    card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
     elements.grid.append(card);
   });
 }
@@ -117,6 +121,70 @@ function unlockPageScroll() {
 }
 
 function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
+
+const AI_TASKS = {
+  'write-description': 'Schreibe eine überzeugende, ehrliche Verkaufsbeschreibung auf Deutsch. Erfinde keine fehlenden Produktdetails. Formuliere sie als direkt nutzbaren Fließtext.',
+  'improve-description': 'Verbessere die vorhandene Verkaufsbeschreibung auf Deutsch. Erhalte alle gesicherten Angaben, mache sie klarer und ansprechender und erfinde keine Fakten.',
+  'price-recommendation': 'Gib eine realistische Preisempfehlung in Euro für dieses Produkt. Begründe die Einschätzung kurz, nenne bei Unsicherheit eine Preisspanne und weise darauf hin, dass es sich um eine Schätzung handelt.'
+};
+
+function openAi(item) {
+  state.aiItemId = item.id; state.aiResult = '';
+  elements.aiTitle.textContent = `KI-Assistent: ${item.name}`;
+  elements.aiContext.textContent = `Aktueller Preis: ${money.format(Number(item.price || 0))} · Beschreibung: ${item.description || 'keine Beschreibung hinterlegt'}`;
+  elements.aiQuestion.value = ''; elements.aiResult.textContent = ''; elements.aiResultWrap.hidden = true; elements.aiError.textContent = '';
+  elements.aiBackdrop.hidden = false; lockPageScroll();
+}
+
+function closeAi() { elements.aiBackdrop.hidden = true; unlockPageScroll(); }
+
+function setAiBusy(busy) {
+  elements.aiAsk.disabled = busy;
+  document.querySelectorAll('.ai-action').forEach((button) => { button.disabled = busy; });
+  elements.aiAsk.textContent = busy ? 'KI denkt …' : 'Frage an die KI senden';
+}
+
+async function requestAi(task, question = '') {
+  if (!state.session) throw new Error('Bitte melde dich zuerst an, damit die KI sicher verwendet werden kann.');
+  const item = state.items.find((entry) => entry.id === state.aiItemId);
+  if (!item) throw new Error('Der ausgewählte Gegenstand ist nicht mehr verfügbar.');
+  const response = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.session.access_token}` },
+    body: JSON.stringify({ task, question, product: { name: item.name, price: item.price, description: item.description || '', imageAvailable: Boolean(item.imagePath), imageUrl: item.image || '' } })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'Die KI-Anfrage konnte nicht verarbeitet werden.');
+  return result.text || '';
+}
+
+async function runAiTask(task) {
+  elements.aiError.textContent = ''; setAiBusy(true);
+  try { state.aiResult = await requestAi(task); elements.aiResult.textContent = state.aiResult; elements.aiResultWrap.hidden = false; }
+  catch (error) { elements.aiError.textContent = error.message; }
+  finally { setAiBusy(false); }
+}
+
+async function askAiQuestion() {
+  const question = elements.aiQuestion.value.trim();
+  if (!question) { elements.aiError.textContent = 'Bitte gib zuerst eine Frage ein.'; return; }
+  elements.aiError.textContent = ''; setAiBusy(true);
+  try { state.aiResult = await requestAi('custom', question); elements.aiResult.textContent = state.aiResult; elements.aiResultWrap.hidden = false; }
+  catch (error) { elements.aiError.textContent = error.message; }
+  finally { setAiBusy(false); }
+}
+
+async function applyAiResult() {
+  if (!state.aiResult || !state.aiItemId) return;
+  const item = state.items.find((entry) => entry.id === state.aiItemId);
+  if (!item) return;
+  const updated = { ...item, description: state.aiResult };
+  try {
+    if (state.session) { state.imagePath = item.imagePath || ''; state.imageFile = null; await saveRemoteItem(updated); await loadRemoteItems(); }
+    else { state.items = state.items.map((entry) => entry.id === updated.id ? updated : entry); saveLocalItems(); render(); }
+    closeAi();
+  } catch (error) { elements.aiError.textContent = error.message || 'Die Beschreibung konnte nicht übernommen werden.'; }
+}
 
 function newId() { return window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
@@ -263,7 +331,7 @@ document.querySelector('#cancel-form-button').addEventListener('click', closeFor
 elements.backdrop.addEventListener('click', (event) => { if (event.target === elements.backdrop) closeForm(); });
 document.querySelector('#export-button').addEventListener('click', exportItems);
 document.querySelector('#import-input').addEventListener('change', importItems);
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); } });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); } });
 
 elements.authButton.addEventListener('click', async () => {
   if (!state.session) return openAuth();
@@ -273,6 +341,11 @@ document.querySelector('#close-auth-button').addEventListener('click', closeAuth
 document.querySelector('#auth-backdrop').addEventListener('click', (event) => { if (event.target === elements.authBackdrop) closeAuth(); });
 elements.authForm.addEventListener('submit', submitAuth);
 elements.authSwitch.addEventListener('click', () => setAuthMode(state.authMode === 'login' ? 'signup' : 'login'));
+document.querySelector('#close-ai-button').addEventListener('click', closeAi);
+elements.aiBackdrop.addEventListener('click', (event) => { if (event.target === elements.aiBackdrop) closeAi(); });
+document.querySelectorAll('.ai-action').forEach((button) => button.addEventListener('click', () => runAiTask(button.dataset.aiAction)));
+elements.aiAsk.addEventListener('click', askAiQuestion);
+elements.aiApply.addEventListener('click', applyAiResult);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.session) loadRemoteItems({ silent: true }).catch(() => {}); });
 
 if (supabaseClient) {

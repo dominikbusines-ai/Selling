@@ -76,6 +76,8 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .text-button { padding: 0; border: 0; color: var(--muted); background: transparent; font-size: 12px; }
 .text-button:hover { color: var(--ink); }
 .delete-button:hover { color: #ad4c3e; }
+.ai-button { margin-right: auto; padding: 5px 9px; border: 1px solid #b9d3c5; border-radius: 5px; color: var(--green); background: #eef6f0; font-size: 11px; font-weight: 700; }
+.ai-button:hover { border-color: var(--green); background: #e2f0e7; }
 
 .modal-backdrop { position: fixed; z-index: 5; inset: 0; display: grid; place-items: center; padding: 24px; overscroll-behavior: contain; background: rgba(35, 37, 34, .42); backdrop-filter: blur(5px); }
 .modal-backdrop[hidden] { display: none; }
@@ -109,6 +111,16 @@ textarea { resize: vertical; }
 .auth-submit { width: 100%; margin-top: 4px; }
 .auth-switch { display: block; margin: 21px auto 0; padding: 0; border: 0; color: var(--green); background: transparent; font-size: 12px; }
 .auth-switch:hover { text-decoration: underline; }
+.ai-modal { width: min(100%, 600px); }
+.ai-product-context { margin: -13px 0 22px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.ai-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 22px; }
+.ai-action { min-height: 58px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #fcfaf6; font-size: 12px; font-weight: 600; line-height: 1.25; }
+.ai-action:hover { border-color: var(--green); color: var(--green); background: #f0f7f2; }
+.ai-question-label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 700; }
+.ai-ask-button { width: 100%; margin-top: 10px; }
+.ai-result-wrap { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.ai-result-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; font-size: 13px; }
+.ai-result { max-height: 240px; overflow: auto; padding: 14px; border-radius: 7px; color: var(--ink); background: #f3f0ea; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
 
 @media (max-width: 820px) {
   .app-shell { width: min(100% - 40px, 650px); }
@@ -128,6 +140,8 @@ textarea { resize: vertical; }
   .section-heading .button { width: 100%; }
   .item-grid { grid-template-columns: 1fr; }
   .item-image-wrap { height: 230px; }
+  .ai-actions { grid-template-columns: 1fr; }
+  .ai-action { min-height: 45px; }
   .modal-backdrop { align-items: end; padding: 0; }
   .modal { max-height: 92vh; padding: 28px 20px calc(22px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; }
   .form-actions { position: sticky; bottom: 0; padding-top: 13px; background: var(--white); }
