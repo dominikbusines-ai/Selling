@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://kfriqckayjehbigvrnys.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq';
 const STORAGE_KEY = 'verkaufsliste-items-v1';
 const IMAGE_BUCKET = 'selling-images';
+const AI_IMAGE_MAX_EDGE = 1800;
 const signedImageCache = new Map();
 const money = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const dateFormat = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -253,14 +254,54 @@ async function requestAi(task, question = '') {
   if (!state.session) throw new Error('Bitte melde dich zuerst an, damit die KI sicher verwendet werden kann.');
   const item = state.aiProduct || state.items.find((entry) => entry.id === state.aiItemId);
   if (!item) throw new Error('Der ausgewählte Gegenstand ist nicht mehr verfügbar.');
+  const imageUrl = await prepareAiImage(item);
   const response = await fetch('/api/ai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.session.access_token}` },
-    body: JSON.stringify({ task, question, product: { name: item.name, price: item.price, description: item.description || '', imageAvailable: Boolean(item.imagePath), imageUrl: item.image || '' } })
+    body: JSON.stringify({ task, question, product: { name: item.name, price: item.price, description: item.description || '', imageAvailable: Boolean(item.imagePath || imageUrl), imageUrl } })
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'Die KI-Anfrage konnte nicht verarbeitet werden.');
   return { text: result.text || '', recommendedPrice: typeof result.recommendedPrice === 'number' ? result.recommendedPrice : null };
+}
+
+function resizeImageForAi(imageUrl) {
+  if (!imageUrl || typeof Image === 'undefined') return Promise.resolve('');
+  return new Promise((resolve) => {
+    const source = new Image();
+    if (!imageUrl.startsWith('data:')) source.crossOrigin = 'anonymous';
+    source.addEventListener('load', () => {
+      const width = source.naturalWidth || source.width;
+      const height = source.naturalHeight || source.height;
+      if (!width || !height) return resolve('');
+      const scale = Math.min(1, AI_IMAGE_MAX_EDGE / Math.max(width, height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      try {
+        const context = canvas.getContext('2d');
+        if (!context) return resolve('');
+        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.76));
+      } catch {
+        resolve('');
+      }
+    }, { once: true });
+    source.addEventListener('error', () => resolve(''), { once: true });
+    source.src = imageUrl;
+  });
+}
+
+async function prepareAiImage(item) {
+  const resized = await resizeImageForAi(item.image || '');
+  if (resized) return resized;
+  if (item.imagePath && supabaseClient) {
+    const { data } = await supabaseClient.storage.from(IMAGE_BUCKET).createSignedUrl(item.imagePath, 86_400, {
+      transform: { width: AI_IMAGE_MAX_EDGE, height: AI_IMAGE_MAX_EDGE, resize: 'contain', quality: 76 }
+    });
+    if (data?.signedUrl) return data.signedUrl;
+  }
+  return item.image || '';
 }
 
 async function runAiTask(task) {

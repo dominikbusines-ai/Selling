@@ -2,6 +2,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kfriqckayjehbigvrnys.s
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
+const MAX_REQUEST_LENGTH = 1_500_000;
 
 const taskInstructions = {
   'write-description': 'Schreibe eine kurze Verkaufsbeschreibung mit 3 bis 5 präzisen Stichpunkten auf Deutsch. Jeder Stichpunkt muss konkret zu diesem Gegenstand passen. Verwende ausschließlich Angaben aus Produktname, vorhandener Beschreibung oder eindeutig sichtbare Merkmale des beigefügten Produktbilds. Erfinde keine Marke, Ausführung, Funktion, technische Daten, Maße oder Zustandsangaben. Keine Überschrift, keine Einleitung und keine allgemeinen Werbesätze.',
@@ -59,7 +60,7 @@ module.exports = async (req, res) => {
   if (!user) return sendJson(res, 401, { error: 'Bitte melde dich an, bevor du die KI verwendest.' });
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-  if (JSON.stringify(body).length > 12000) return sendJson(res, 413, { error: 'Die Anfrage ist zu groß.' });
+  if (JSON.stringify(body).length > MAX_REQUEST_LENGTH) return sendJson(res, 413, { error: 'Die Anfrage ist zu groß.' });
   const task = typeof body.task === 'string' ? body.task : '';
   const question = typeof body.question === 'string' ? body.question.trim().slice(0, 2000) : '';
   const product = body.product && typeof body.product === 'object' ? body.product : {};
