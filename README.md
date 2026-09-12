@@ -28,6 +28,14 @@ Den gesamten Inhalt dieses Ordners nach `C:\Users\Kunde\Projekte\Selling` kopier
 
 In Vercel das GitHub-Repository importieren. Als Framework-Preset kann **Other** beziehungsweise **No Framework** verwendet werden. Build Command und Output Directory bleiben leer. Vercel liefert anschließend die `index.html` direkt aus.
 
+## Als iPhone-App installieren
+
+Nach dem Deployment die Website in Safari öffnen. Im Teilen-Menü „Zum Home-Bildschirm“ wählen, „Als Web-App öffnen“ aktivieren und „Hinzufügen“ antippen. Die Verkaufsliste startet anschließend über ihr eigenes Symbol ohne Safari-Adressleiste. Falls nötig, in der App einmal mit dem bisherigen Konto anmelden.
+
+Die PWA benötigt HTTPS (bei Vercel automatisch vorhanden). Zum Laden und Speichern der Online-Einträge sowie für die KI wird Internet benötigt. Bei einem Start ohne Verbindung erscheint ein Offline-Hinweis mit „Erneut versuchen“. Der Service Worker speichert ausschließlich diese neutrale Hinweisseite; die Website wird bei jedem Öffnen aus dem Netz geladen. Updates laden kein geöffnetes Formular automatisch neu.
+
+Die PNG-Symbole liegen in `icons/` und sind bereits enthalten. Bei Änderungen am Markenzeichen können sie unter Windows mit `scripts/generate-icons.ps1` neu erzeugt werden.
+
 ## Anthropic-KI in Vercel
 
 In Vercel unter **Settings → Environment Variables** diese Variable als **Secret** für Production, Preview und Development hinterlegen:
