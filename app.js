@@ -86,8 +86,21 @@ function render() {
     card.querySelector('.compact-price').textContent = money.format(displayPrice);
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
     if (item.image) {
-      image.src = item.image; image.alt = `Bild von ${item.name}`; card.querySelector('.no-image').hidden = true;
-      image.addEventListener('error', () => { image.hidden = true; const fallback = card.querySelector('.no-image'); fallback.hidden = false; fallback.textContent = 'Bild konnte nicht geladen werden'; });
+      image.hidden = false;
+      image.classList.add('is-loading');
+      image.decoding = 'async';
+      image.alt = `Bild von ${item.name}`;
+      card.querySelector('.no-image').hidden = true;
+      image.addEventListener('load', () => image.classList.remove('is-loading'), { once: true });
+      image.addEventListener('error', () => {
+        image.classList.remove('is-loading');
+        image.hidden = true;
+        const fallback = card.querySelector('.no-image');
+        fallback.hidden = false;
+        fallback.textContent = 'Bild konnte nicht geladen werden';
+      }, { once: true });
+      image.src = item.image;
+      if (image.complete && image.naturalWidth > 0) image.classList.remove('is-loading');
     } else { image.hidden = true; }
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
@@ -150,7 +163,7 @@ function openForm(item = null) {
   elements.deleteItem.hidden = !item;
   elements.formAi.hidden = !item;
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
-  requestAnimationFrame(() => elements.name.focus());
+  if (!window.matchMedia?.('(pointer: coarse)').matches) requestAnimationFrame(() => elements.name.focus());
 }
 
 function closeForm() { elements.backdrop.hidden = true; state.editingItemId = ''; if (elements.aiBackdrop.hidden) unlockPageScroll(); }

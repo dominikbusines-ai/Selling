@@ -70,7 +70,8 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-grid.compact-view { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .item-card { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--white); box-shadow: 0 8px 25px rgba(47, 42, 34, .035); }
 .item-image-wrap { position: relative; height: 210px; background: var(--paper-deep); }
-.item-image { display: block; width: 100%; height: 100%; object-fit: cover; }
+.item-image { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 1; transition: opacity .18s ease; }
+.item-image.is-loading { opacity: 0; }
 .no-image { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
 .no-image[hidden] { display: none; }
 .compact-price { display: none; }
@@ -86,20 +87,21 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-card-body { padding: 18px 19px 15px; }
 .item-card-topline { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .item-name { margin-bottom: 9px; font-size: 17px; letter-spacing: -.03em; }
-.more-button { padding: 0; border: 0; color: var(--muted); background: transparent; letter-spacing: 2px; }
+.more-button { min-width: 44px; min-height: 44px; padding: 0 8px; border: 0; color: var(--muted); background: transparent; letter-spacing: 2px; touch-action: manipulation; }
 .item-description { min-height: 40px; margin-bottom: 19px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .item-card-footer { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
 .item-price { color: var(--green); font-size: 18px; letter-spacing: -.03em; }
 .item-date { color: var(--muted); font-size: 11px; }
 .item-actions { display: flex; justify-content: flex-end; gap: 13px; margin-top: 15px; }
-.text-button { padding: 0; border: 0; color: var(--muted); background: transparent; font-size: 12px; }
+.text-button { min-height: 44px; padding: 10px 8px; border: 0; color: var(--muted); background: transparent; font-size: 12px; touch-action: manipulation; }
 .text-button:hover { color: var(--ink); }
-.ai-button { margin-right: auto; padding: 5px 9px; border: 1px solid #b9d3c5; border-radius: 5px; color: var(--green); background: #eef6f0; font-size: 11px; font-weight: 700; }
+.ai-button { min-height: 44px; margin-right: auto; padding: 10px 12px; border: 1px solid #b9d3c5; border-radius: 5px; color: var(--green); background: #eef6f0; font-size: 11px; font-weight: 700; touch-action: manipulation; }
 .ai-button:hover { border-color: var(--green); background: #e2f0e7; }
 
 .modal-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; width: 100%; min-height: 100vh; min-height: 100dvh; padding: 24px; overflow: hidden; overscroll-behavior: contain; background: rgba(35, 37, 34, .42); backdrop-filter: blur(5px); }
 .modal-backdrop[hidden] { display: none; }
 .modal { position: relative; width: min(100%, 530px); max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 32px; border-radius: 13px; background: var(--white); box-shadow: 0 25px 70px rgba(28, 25, 19, .22); }
+.modal button, .modal input, .modal textarea { touch-action: manipulation; }
 html.modal-open, body.modal-open { height: 100%; overflow: hidden !important; overscroll-behavior: none; }
 .close-button { position: absolute; z-index: 20; top: 13px; right: 13px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; color: var(--muted); background: var(--paper); font-size: 22px; line-height: 1; touch-action: manipulation; }
 .modal h2 { margin-bottom: 26px; }
