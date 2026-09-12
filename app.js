@@ -43,7 +43,7 @@ const elements = {
   id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'), formAi: document.querySelector('#open-ai-from-form'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
-  sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price')
+  sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price'), saveItem: document.querySelector('#item-form button[type="submit"]'), cancelForm: document.querySelector('#cancel-form-button'), closeForm: document.querySelector('#close-form-button')
 };
 
 function loadLocalItems() {
@@ -178,6 +178,17 @@ function setPreview(data) {
   if (!data) elements.preview.append(document.createTextNode('＋'));
   else { const image = document.createElement('img'); image.src = data; image.alt = 'Vorschau'; elements.preview.append(image); }
   elements.removeImage.hidden = !Boolean(data || state.imagePath);
+}
+
+function setFormBusy(busy) {
+  elements.form.setAttribute('aria-busy', String(busy));
+  elements.saveItem.disabled = busy;
+  elements.cancelForm.disabled = busy;
+  elements.closeForm.disabled = busy;
+  elements.deleteItem.disabled = busy;
+  elements.saveItem.textContent = busy
+    ? (state.imageFile ? 'Bild wird gespeichert …' : 'Speichert …')
+    : 'Eintrag speichern';
 }
 
 function setAuthMessage(message, success = false) {
@@ -391,21 +402,31 @@ async function saveRemoteItem(item) {
 
 async function submitItem(event) {
   event.preventDefault();
-  try { if (state.imageReadPromise) await state.imageReadPromise; }
-  catch (error) { elements.error.textContent = error.message || 'Das Bild konnte nicht gelesen werden.'; return; }
-  const name = elements.name.value.trim(); const price = Number(elements.price.value);
-  if (!name || Number.isNaN(price) || price < 0) { elements.error.textContent = 'Bitte gib einen Namen und einen gültigen Preis ein.'; return; }
-  const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
-  if (sold && (Number.isNaN(soldPrice) || soldPrice < 0)) { elements.error.textContent = 'Bitte gib den tatsächlichen Verkaufspreis ein.'; return; }
-  const existing = state.items.find((item) => item.id === elements.id.value);
-  const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
-  elements.error.textContent = ''; state.busy = true;
+  if (state.busy) return;
+  state.busy = true;
+  setFormBusy(true);
   try {
+    // Für den Supabase-Upload wird die Originaldatei direkt verwendet. Die
+    // Vorschau muss dort nicht erst als Data-URL gelesen werden – das ist auf
+    // iPhones bei großen Fotos oder HEIC-Dateien unnötig langsam.
+    if (!state.session && state.imageReadPromise) await state.imageReadPromise;
+    const name = elements.name.value.trim(); const price = Number(elements.price.value);
+    if (!name || Number.isNaN(price) || price < 0) { elements.error.textContent = 'Bitte gib einen Namen und einen gültigen Preis ein.'; return; }
+    const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
+    if (sold && (Number.isNaN(soldPrice) || soldPrice < 0)) { elements.error.textContent = 'Bitte gib den tatsächlichen Verkaufspreis ein.'; return; }
+    const existing = state.items.find((item) => item.id === elements.id.value);
+    const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
+    elements.error.textContent = state.imageFile ? 'Bild wird hochgeladen …' : 'Eintrag wird gespeichert …';
     if (state.session) { await saveRemoteItem(item); await loadRemoteItems(); }
     else { state.items = existing ? state.items.map((entry) => entry.id === item.id ? item : entry) : [item, ...state.items]; saveLocalItems(); render(); }
     closeForm();
-  } catch (error) { elements.error.textContent = error.message || 'Der Eintrag konnte nicht gespeichert werden.'; }
-  finally { state.busy = false; }
+  } catch (error) {
+    elements.error.textContent = error.message || 'Der Eintrag konnte nicht gespeichert werden.';
+    elements.error.scrollIntoView({ block: 'nearest' });
+  } finally {
+    state.busy = false;
+    setFormBusy(false);
+  }
 }
 
 async function deleteItem(id) {
@@ -454,6 +475,7 @@ elements.image.addEventListener('change', () => {
     reader.addEventListener('error', () => reject(new Error('Das Bild konnte nicht gelesen werden.')));
     reader.readAsDataURL(file);
   });
+  state.imageReadPromise.catch(() => {});
 });
 elements.removeImage.addEventListener('click', () => {
   if (state.imagePath) state.removedImagePath = state.imagePath;
