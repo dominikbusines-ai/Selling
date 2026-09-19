@@ -242,6 +242,7 @@ function lockPageScroll() {
   document.body.style.left = '0';
   document.body.style.right = '0';
   document.body.style.width = '100%';
+  document.body.style.height = 'auto';
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
 }
@@ -255,6 +256,7 @@ function unlockPageScroll() {
   document.body.style.left = '';
   document.body.style.right = '';
   document.body.style.width = '';
+  document.body.style.height = '';
   window.scrollTo(0, scrollY);
 }
 
