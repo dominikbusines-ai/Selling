@@ -1,6 +1,7 @@
 -- Erweiterung für Verkaufsstatus und tatsächlichen Verkaufspreis
 alter table public.selling_items
   add column if not exists sold boolean not null default false,
+  add column if not exists ready_for_sale boolean not null default false,
   add column if not exists sold_price_cents integer,
   add column if not exists sold_at timestamptz;
 

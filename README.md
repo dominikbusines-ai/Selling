@@ -52,4 +52,4 @@ Die optionalen öffentlichen Variablen `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_
 
 ## Verkaufsstatus aktivieren
 
-Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Danach können Gegenstände als verkauft markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.
+Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Das Skript ergänzt den Verkaufsstatus und den Status „Bereit zum Verkauf“. Danach können Gegenstände als verkauft oder als fertig eingerichtet markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.

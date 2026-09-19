@@ -44,7 +44,7 @@ const elements = {
   id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'), formAi: document.querySelector('#open-ai-from-form'),
   syncStatus: document.querySelector('#sync-status'), compactViewButton: document.querySelector('#compact-view-button'), soldValue: document.querySelector('#sold-value'), soldCount: document.querySelector('#sold-count'), soldValueButton: document.querySelector('#sold-value-button'), soldBackdrop: document.querySelector('#sold-backdrop'), soldSummary: document.querySelector('#sold-summary'), soldList: document.querySelector('#sold-list'), authButton: document.querySelector('#auth-button'), authBackdrop: document.querySelector('#auth-backdrop'), authForm: document.querySelector('#auth-form'), authTitle: document.querySelector('#auth-title'), authEyebrow: document.querySelector('#auth-eyebrow'), authIntro: document.querySelector('#auth-intro'), authEmail: document.querySelector('#auth-email'), authPassword: document.querySelector('#auth-password'), authSubmit: document.querySelector('#auth-submit'), authError: document.querySelector('#auth-error'), authSwitch: document.querySelector('#auth-switch'),
   aiBackdrop: document.querySelector('#ai-backdrop'), aiTitle: document.querySelector('#ai-title'), aiContext: document.querySelector('#ai-product-context'), aiQuestion: document.querySelector('#ai-question'), aiAsk: document.querySelector('#ai-ask-button'), aiResultWrap: document.querySelector('#ai-result-wrap'), aiResult: document.querySelector('#ai-result'), aiApply: document.querySelector('#ai-apply-button'), aiError: document.querySelector('#ai-error'),
-  sold: document.querySelector('#item-sold'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price'), saveItem: document.querySelector('#item-form button[type="submit"]'), cancelForm: document.querySelector('#cancel-form-button'), closeForm: document.querySelector('#close-form-button')
+  sold: document.querySelector('#item-sold'), ready: document.querySelector('#item-ready'), soldPriceField: document.querySelector('#sold-price-field'), soldPrice: document.querySelector('#item-sold-price'), saveItem: document.querySelector('#item-form button[type="submit"]'), cancelForm: document.querySelector('#cancel-form-button'), closeForm: document.querySelector('#close-form-button'), imageBackdrop: document.querySelector('#image-backdrop'), imagePreview: document.querySelector('#image-preview'), imagePreviewTitle: document.querySelector('#image-preview-title')
 };
 
 function loadLocalItems() {
@@ -79,13 +79,15 @@ function render() {
   state.items.forEach((item) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
-    const imageWrap = card.querySelector('.item-image-wrap');
     card.querySelector('.item-name').textContent = item.name;
     card.querySelector('.item-description').textContent = item.description || 'Keine Beschreibung hinterlegt.';
     const displayPrice = item.sold ? Number(item.soldPrice ?? item.price) : Number(item.price);
     card.querySelector('.item-price').textContent = item.sold ? `Verkauft: ${money.format(displayPrice)}` : money.format(displayPrice);
     card.querySelector('.compact-price').textContent = money.format(displayPrice);
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
+    const itemCard = card.querySelector('.item-card');
+    itemCard.classList.toggle('is-sold', Boolean(item.sold));
+    itemCard.classList.toggle('is-ready', Boolean(item.readyForSale && !item.sold));
     if (item.image) {
       image.hidden = false;
       image.classList.add('is-loading');
@@ -106,16 +108,20 @@ function render() {
     card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
     card.querySelector('.more-button').addEventListener('click', () => openForm(item));
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
-    card.querySelector('.item-card').classList.toggle('is-compact', state.compactView);
-    if (state.compactView) {
-      imageWrap.tabIndex = 0;
-      imageWrap.setAttribute('role', 'button');
-      imageWrap.setAttribute('aria-label', `${item.name} bearbeiten`);
-      imageWrap.addEventListener('click', () => openForm(item));
-      imageWrap.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openForm(item); }
-      });
-    }
+    itemCard.classList.toggle('is-compact', state.compactView);
+    itemCard.tabIndex = 0;
+    itemCard.setAttribute('role', 'button');
+    itemCard.setAttribute('aria-label', `${item.name} bearbeiten`);
+    itemCard.addEventListener('click', (event) => {
+      if (event.target.closest('button, a')) return;
+      if (!state.compactView && event.target.closest('.item-image-wrap') && item.image) openImagePreview(item);
+      else openForm(item);
+    });
+    itemCard.addEventListener('keydown', (event) => {
+      if (event.target !== itemCard || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      openForm(item);
+    });
     elements.grid.append(card);
   });
 }
@@ -154,11 +160,26 @@ function openSoldList() {
 
 function closeSoldList() { elements.soldBackdrop.hidden = true; unlockPageScroll(); }
 
+function openImagePreview(item) {
+  if (!item.image) return openForm(item);
+  elements.imagePreviewTitle.textContent = item.name;
+  elements.imagePreview.src = item.image;
+  elements.imagePreview.alt = `Großansicht von ${item.name}`;
+  elements.imageBackdrop.hidden = false;
+  lockPageScroll();
+}
+
+function closeImagePreview() {
+  elements.imageBackdrop.hidden = true;
+  elements.imagePreview.removeAttribute('src');
+  if (elements.backdrop.hidden && elements.aiBackdrop.hidden && elements.soldBackdrop.hidden) unlockPageScroll();
+}
+
 function openForm(item = null) {
   elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = item?.imagePath || ''; state.removedImagePath = '';
   state.editingItemId = item?.id || '';
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
-  elements.sold.checked = Boolean(item?.sold); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
+  elements.sold.checked = Boolean(item?.sold); elements.ready.checked = Boolean(item?.readyForSale); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
   elements.deleteItem.hidden = !item;
@@ -379,6 +400,7 @@ function sameRemoteItems(previousItems, nextItems) {
       && item.description === next.description
       && item.imagePath === next.imagePath
       && item.sold === next.sold
+      && item.readyForSale === next.readyForSale
       && item.soldPrice === next.soldPrice
       && item.soldAt === next.soldAt
       && item.createdAt === next.createdAt;
@@ -391,7 +413,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   const { data, error } = await supabaseClient.from('selling_items').select('*').order('created_at', { ascending: false });
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
   const nextItems = await Promise.all((data || []).map(async (row) => ({
-    id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
+    id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), readyForSale: Boolean(row.ready_for_sale), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
   })));
   if (!sameRemoteItems(state.items, nextItems)) {
     state.items = nextItems;
@@ -436,7 +458,7 @@ async function saveRemoteItem(item) {
     imagePath = null;
   }
   const { error } = await supabaseClient.from('selling_items').upsert({
-    id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
+    id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), ready_for_sale: Boolean(item.readyForSale), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
   }, { onConflict: 'id' });
   if (error) throw error;
 }
@@ -456,7 +478,7 @@ async function submitItem(event) {
     const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
     if (sold && (Number.isNaN(soldPrice) || soldPrice < 0)) { elements.error.textContent = 'Bitte gib den tatsächlichen Verkaufspreis ein.'; return; }
     const existing = state.items.find((item) => item.id === elements.id.value);
-    const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
+    const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, readyForSale: elements.ready.checked, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
     elements.error.textContent = state.imageFile ? 'Bild wird hochgeladen …' : 'Eintrag wird gespeichert …';
     if (state.session) { await saveRemoteItem(item); await loadRemoteItems(); }
     else { state.items = existing ? state.items.map((entry) => entry.id === item.id ? item : entry) : [item, ...state.items]; saveLocalItems(); render(); }
@@ -529,6 +551,8 @@ elements.compactViewButton.addEventListener('click', toggleCompactView);
 elements.soldValueButton.addEventListener('click', openSoldList);
 document.querySelector('#close-sold-button').addEventListener('click', closeSoldList);
 elements.soldBackdrop.addEventListener('click', (event) => { if (event.target === elements.soldBackdrop) closeSoldList(); });
+document.querySelector('#close-image-button').addEventListener('click', closeImagePreview);
+elements.imageBackdrop.addEventListener('click', (event) => { if (event.target === elements.imageBackdrop) closeImagePreview(); });
 elements.sold.addEventListener('change', updateSoldFields);
 document.querySelector('#close-form-button').addEventListener('click', closeForm);
 document.querySelector('#cancel-form-button').addEventListener('click', closeForm);
@@ -548,7 +572,7 @@ elements.deleteItem.addEventListener('click', () => {
   if (!state.busy && elements.id.value) deleteItem(elements.id.value);
 });
 elements.backdrop.addEventListener('click', (event) => { if (event.target === elements.backdrop) closeForm(); });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); if (!elements.soldBackdrop.hidden) closeSoldList(); } });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.backdrop.hidden) closeForm(); if (!elements.authBackdrop.hidden) closeAuth(); if (!elements.aiBackdrop.hidden) closeAi(); if (!elements.soldBackdrop.hidden) closeSoldList(); if (!elements.imageBackdrop.hidden) closeImagePreview(); } });
 
 elements.authButton.addEventListener('click', async () => {
   if (!state.session) return openAuth();

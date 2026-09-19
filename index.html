@@ -89,6 +89,10 @@
               <input id="item-sold" name="sold" type="checkbox" />
               <label for="item-sold">Verkauft</label>
             </div>
+            <div class="ready-toggle">
+              <input id="item-ready" name="readyForSale" type="checkbox" />
+              <label for="item-ready">Bereit zum Verkauf</label>
+            </div>
             <label id="sold-price-field" hidden>
               <span>Verkauft für</span>
               <div class="input-with-suffix"><input id="item-sold-price" name="soldPrice" type="number" min="0" step="0.01" placeholder="0,00" /><span>€</span></div>
@@ -171,9 +175,18 @@
       </section>
     </div>
 
+    <div class="modal-backdrop image-lightbox-backdrop" id="image-backdrop" hidden>
+      <section class="modal image-lightbox" role="dialog" aria-modal="true" aria-labelledby="image-preview-title">
+        <button class="close-button" id="close-image-button" type="button" aria-label="Bild schließen">×</button>
+        <p class="eyebrow">Bildansicht</p>
+        <h2 id="image-preview-title"></h2>
+        <img id="image-preview" alt="" />
+      </section>
+    </div>
+
     <template id="item-template">
       <article class="item-card">
-        <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span><strong class="compact-price"></strong></div>
+        <div class="item-image-wrap"><img class="item-image" alt="" /><span class="no-image">Kein Bild</span><strong class="compact-price"></strong><span class="sold-badge" aria-label="Verkauft">✓</span></div>
         <div class="item-card-body">
           <div class="item-card-topline"><h3 class="item-name"></h3><button class="more-button" type="button" aria-label="Optionen">•••</button></div>
           <p class="item-description"></p>
