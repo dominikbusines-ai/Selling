@@ -91,7 +91,7 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-card.is-compact .compact-price { position: absolute; right: 12px; bottom: 11px; left: 12px; z-index: 3; display: block; color: var(--white); font-size: 17px; letter-spacing: -.03em; text-align: right; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
 .item-card.is-compact .item-card-body { display: none; }
 .item-card.is-sold .item-image { filter: brightness(.88) saturate(.9); }
-.item-card.is-sold .item-image-wrap::before { position: absolute; z-index: 1; inset: 0; display: block; background: linear-gradient(135deg, rgba(49, 126, 83, .25), rgba(49, 126, 83, .08)); content: ''; pointer-events: none; }
+.item-card.is-sold .item-image-wrap::before { position: absolute; z-index: 1; inset: 0; display: block; background: linear-gradient(135deg, rgba(40, 143, 86, .46), rgba(33, 77, 64, .2)); content: ''; pointer-events: none; }
 .sold-badge { position: absolute; z-index: 4; top: 50%; left: 50%; display: none; place-items: center; width: 58px; height: 58px; border: 3px solid rgba(255, 253, 249, .9); border-radius: 50%; color: var(--white); background: #2f8a5c; box-shadow: 0 4px 18px rgba(23, 57, 47, .28); font-size: 34px; line-height: 1; transform: translate(-50%, -50%); }
 .item-card.is-sold .sold-badge { display: grid; }
 .image-lightbox { width: min(100%, 760px); }
