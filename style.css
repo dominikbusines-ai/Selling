@@ -100,7 +100,6 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-card-body { padding: 18px 19px 15px; }
 .item-card-topline { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .item-name { margin-bottom: 9px; font-size: 17px; letter-spacing: -.03em; }
-.more-button { min-width: 44px; min-height: 44px; padding: 0 8px; border: 0; color: var(--muted); background: transparent; letter-spacing: 2px; touch-action: manipulation; }
 .item-description { min-height: 40px; margin-bottom: 19px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .item-card-footer { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
 .item-price { color: var(--green); font-size: 18px; letter-spacing: -.03em; }

@@ -35,6 +35,7 @@ const state = {
   aiReturnToForm: false,
   compactView: localStorage.getItem('verkaufsliste-compact-view') === 'true',
   editingItemId: '',
+  scrollLockY: 0,
   busy: false
 };
 
@@ -105,8 +106,6 @@ function render() {
       image.src = item.image;
       if (image.complete && image.naturalWidth > 0) image.classList.remove('is-loading');
     } else { image.hidden = true; }
-    card.querySelector('.edit-button').addEventListener('click', () => openForm(item));
-    card.querySelector('.more-button').addEventListener('click', () => openForm(item));
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
     itemCard.classList.toggle('is-compact', state.compactView);
     itemCard.tabIndex = 0;
@@ -236,13 +235,27 @@ function openAuth() {
 }
 
 function lockPageScroll() {
+  if (document.documentElement.classList.contains('modal-open')) return;
+  state.scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${state.scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
 }
 
 function unlockPageScroll() {
+  const scrollY = state.scrollLockY;
   document.documentElement.classList.remove('modal-open');
   document.body.classList.remove('modal-open');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, scrollY);
 }
 
 function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
