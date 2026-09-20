@@ -18,6 +18,8 @@ const supabaseClient = window.supabase?.createClient
   : null;
 
 const state = {
+  section: location.hash === '#wertgegenstaende' ? 'valuables' : 'selling',
+  formSection: 'selling',
   items: loadLocalItems(),
   session: null,
   imageData: '',
@@ -64,20 +66,44 @@ function formatDate(value) {
   try { return dateFormat.format(new Date(value)); } catch { return ''; }
 }
 
+function itemSection(item) { return item.category === 'valuables' ? 'valuables' : 'selling'; }
+
+function visibleItems() { return state.items.filter((item) => itemSection(item) === state.section); }
+
+function updateSection() {
+  const valuables = state.section === 'valuables';
+  document.body.classList.toggle('valuables-page', valuables);
+  document.title = `${valuables ? 'Wertgegenstände' : 'Verkaufsliste'} · Meine Gegenstände`;
+  document.querySelectorAll('[data-section]').forEach((link) => {
+    if (link.dataset.section === state.section) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  document.querySelector('.hero-intro .eyebrow').textContent = valuables ? 'Deine Wertübersicht' : 'Deine Verkaufsübersicht';
+  document.querySelector('#page-title').innerHTML = valuables ? 'Deine Schätze.<br /><em>Alles im Blick.</em>' : 'Weniger suchen.<br /><em>Mehr verkaufen.</em>';
+  document.querySelector('.hero-copy').textContent = valuables ? 'Behalte deine Wertgegenstände mit Bild und Wert im Überblick – auf all deinen Geräten.' : 'Halte deine Gegenstände, Preise und Bilder an einem Ort fest – und synchronisiere sie geräteübergreifend.';
+  document.querySelector('.workspace').setAttribute('aria-label', valuables ? 'Wertgegenstände' : 'Verkaufsübersicht');
+  document.querySelector('.section-heading h2').textContent = valuables ? 'Deine Wertgegenstände' : 'Deine Gegenstände';
+  document.querySelector('.value-card:not(button)').setAttribute('aria-label', valuables ? 'Gesamtwert der Wertgegenstände' : 'Gesamtwert der noch verfügbaren Gegenstände');
+  document.querySelector('#empty-state p').textContent = valuables ? 'Lege deinen ersten Wertgegenstand an – mit Name, Wert und Bild.' : 'Lege deinen ersten Gegenstand an – mit Bild, Preis und einer kurzen Beschreibung.';
+  elements.soldValueButton.hidden = valuables;
+}
+
 function render() {
+  updateSection();
+  const items = visibleItems();
   elements.grid.innerHTML = '';
   elements.grid.classList.toggle('compact-view', state.compactView);
-  elements.empty.hidden = state.items.length > 0;
-  const availableItems = state.items.filter((item) => !item.sold);
-  const soldItems = state.items.filter((item) => item.sold);
+  elements.empty.hidden = items.length > 0;
+  const availableItems = items.filter((item) => state.section === 'valuables' || !item.sold);
+  const soldItems = items.filter((item) => itemSection(item) === 'selling' && item.sold);
   const total = availableItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
   const soldTotal = soldItems.reduce((sum, item) => sum + Number(item.soldPrice ?? item.price ?? 0), 0);
   elements.total.textContent = money.format(total);
-  elements.count.textContent = `${availableItems.length} ${availableItems.length === 1 ? 'Gegenstand' : 'Gegenstände'} verfügbar`;
+  elements.count.textContent = `${availableItems.length} ${availableItems.length === 1 ? 'Gegenstand' : 'Gegenstände'}${state.section === 'valuables' ? '' : ' verfügbar'}`;
   elements.soldValue.textContent = money.format(soldTotal);
   elements.soldCount.textContent = `${soldItems.length} verkauft · Details öffnen`;
 
-  state.items.forEach((item) => {
+  items.forEach((item) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
     card.querySelector('.item-name').textContent = item.name;
@@ -137,7 +163,7 @@ function toggleCompactView() {
 }
 
 function openSoldList() {
-  const soldItems = state.items.filter((item) => item.sold);
+  const soldItems = state.items.filter((item) => itemSection(item) === 'selling' && item.sold);
   const total = soldItems.reduce((sum, item) => sum + Number(item.soldPrice ?? item.price ?? 0), 0);
   elements.soldSummary.textContent = `${soldItems.length} ${soldItems.length === 1 ? 'Gegenstand' : 'Gegenstände'} · ${money.format(total)} Verkaufserlös`;
   elements.soldList.replaceChildren();
@@ -175,14 +201,21 @@ function closeImagePreview() {
 }
 
 function openForm(item = null) {
+  state.formSection = item ? itemSection(item) : state.section;
+  const valuables = state.formSection === 'valuables';
+  elements.form.classList.toggle('valuables-form', valuables);
+  elements.description.closest('label').hidden = valuables;
+  elements.sold.closest('.sold-toggle').hidden = valuables;
+  elements.ready.closest('.ready-toggle').hidden = valuables;
+  elements.price.closest('label').querySelector('span').textContent = valuables ? 'Wert in Euro' : 'Preis in Euro';
   elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = item?.imagePath || ''; state.removedImagePath = '';
   state.editingItemId = item?.id || '';
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
   elements.sold.checked = Boolean(item?.sold); elements.ready.checked = Boolean(item?.readyForSale); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
-  elements.formTitle.textContent = item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen';
+  elements.formTitle.textContent = valuables ? (item ? 'Wertgegenstand bearbeiten' : 'Wertgegenstand hinzufügen') : (item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen');
   elements.deleteItem.hidden = !item;
-  elements.formAi.hidden = !item;
+  elements.formAi.hidden = !item || valuables;
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   if (!window.matchMedia?.('(pointer: coarse)').matches) requestAnimationFrame(() => elements.name.focus());
 }
@@ -190,8 +223,9 @@ function openForm(item = null) {
 function closeForm() { elements.backdrop.hidden = true; state.editingItemId = ''; if (elements.aiBackdrop.hidden) unlockPageScroll(); }
 
 function updateSoldFields() {
-  elements.soldPriceField.hidden = !elements.sold.checked;
-  elements.soldPrice.required = elements.sold.checked;
+  const sold = state.formSection === 'selling' && elements.sold.checked;
+  elements.soldPriceField.hidden = !sold;
+  elements.soldPrice.required = sold;
 }
 
 function setPreview(data) {
@@ -269,6 +303,7 @@ const AI_TASKS = {
 };
 
 function openAi(item) {
+  if (itemSection(item) === 'valuables') return;
   state.aiReturnToForm = !elements.backdrop.hidden && state.editingItemId === item.id;
   state.aiProduct = item;
   state.aiItemId = item.id; state.aiResult = ''; state.aiTask = ''; state.aiRecommendedPrice = null;
@@ -415,6 +450,7 @@ function sameRemoteItems(previousItems, nextItems) {
       && item.description === next.description
       && item.imagePath === next.imagePath
       && item.sold === next.sold
+      && itemSection(item) === itemSection(next)
       && item.readyForSale === next.readyForSale
       && item.soldPrice === next.soldPrice
       && item.soldAt === next.soldAt
@@ -428,6 +464,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   const { data, error } = await supabaseClient.from('selling_items').select('*').order('created_at', { ascending: false });
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
   const nextItems = await Promise.all((data || []).map(async (row) => ({
+    category: row.category || 'selling',
     id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), readyForSale: Boolean(row.ready_for_sale), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
   })));
   if (!sameRemoteItems(state.items, nextItems)) {
@@ -473,6 +510,7 @@ async function saveRemoteItem(item) {
     imagePath = null;
   }
   const { error } = await supabaseClient.from('selling_items').upsert({
+    category: itemSection(item),
     id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), ready_for_sale: Boolean(item.readyForSale), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
   }, { onConflict: 'id' });
   if (error) throw error;
@@ -490,10 +528,13 @@ async function submitItem(event) {
     if (!state.session && state.imageReadPromise) await state.imageReadPromise;
     const name = elements.name.value.trim(); const price = Number(elements.price.value);
     if (!name || Number.isNaN(price) || price < 0) { elements.error.textContent = 'Bitte gib einen Namen und einen gültigen Preis ein.'; return; }
-    const sold = elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
+    const valuables = state.formSection === 'valuables';
+    const sold = !valuables && elements.sold.checked; const soldPrice = sold ? Number(elements.soldPrice.value) : null;
     if (sold && (Number.isNaN(soldPrice) || soldPrice < 0)) { elements.error.textContent = 'Bitte gib den tatsächlichen Verkaufspreis ein.'; return; }
     const existing = state.items.find((item) => item.id === elements.id.value);
     const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, readyForSale: elements.ready.checked, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
+    item.category = existing ? itemSection(existing) : state.formSection;
+    if (valuables) { item.description = ''; item.readyForSale = false; }
     elements.error.textContent = state.imageFile ? 'Bild wird hochgeladen …' : 'Eintrag wird gespeichert …';
     if (state.session) { await saveRemoteItem(item); await loadRemoteItems(); }
     else { state.items = existing ? state.items.map((entry) => entry.id === item.id ? item : entry) : [item, ...state.items]; saveLocalItems(); render(); }
@@ -604,6 +645,11 @@ elements.aiAsk.addEventListener('click', askAiQuestion);
 elements.aiApply.addEventListener('click', applyAiResult);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.session) loadRemoteItems({ silent: true }).catch(() => {}); });
 
+window.addEventListener('hashchange', () => {
+  state.section = location.hash === '#wertgegenstaende' ? 'valuables' : 'selling';
+  render();
+});
+updateSection();
 updateViewToggle();
 if (supabaseClient) {
   supabaseClient.auth.onAuthStateChange((_event, session) => window.setTimeout(() => handleSession(session), 0));

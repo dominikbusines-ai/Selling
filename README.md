@@ -50,6 +50,12 @@ Für die KI-Anfrage werden die Daten des ausgewählten Gegenstands und – falls
 
 Die optionalen öffentlichen Variablen `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` sind in `.env.example` dokumentiert. Sie müssen nicht angelegt werden, wenn die bereits im Projekt hinterlegten öffentlichen Werte verwendet werden.
 
-## Verkaufsstatus aktivieren
+## Wertgegenstände aktivieren
+
+Vor dem Deployment einmal `supabase-valuables.sql` im Supabase SQL Editor ausführen. Die neue Spalte `category` trennt die Einträge in Verkaufsliste und Wertgegenstände. Bestehende Einträge werden der Verkaufsliste zugeordnet; die bisherigen Zugriffsregeln gelten weiterhin. Ohne diese Migration können neue Speichervorgänge fehlschlagen.
+
+Die Navigation öffnet den eigenen Bereich über `#wertgegenstaende`. Dort werden Name, Wert und Bild gespeichert; Bearbeiten, Löschen, Kompaktansicht und Bildvergrößerung stehen ebenfalls zur Verfügung. Die Gesamtsumme enthält ausschließlich Wertgegenstände. Beschreibung, Verkaufsstatus, Bereit-Status und KI sind dort nicht verfügbar.
+
+## Verkaufsstatus einrichten
 
 Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Das Skript ergänzt den Verkaufsstatus und den Status „Bereit zum Verkauf“. Danach können Gegenstände als verkauft oder als fertig eingerichtet markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.
