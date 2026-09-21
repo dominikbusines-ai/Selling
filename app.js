@@ -103,7 +103,7 @@ function render() {
   elements.soldValue.textContent = money.format(soldTotal);
   elements.soldCount.textContent = `${soldItems.length} verkauft · Details öffnen`;
 
-  items.forEach((item) => {
+  items.forEach((item, index) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
     card.querySelector('.item-name').textContent = item.name;
@@ -119,6 +119,8 @@ function render() {
       image.hidden = false;
       image.classList.add('is-loading');
       image.decoding = 'async';
+      image.loading = index < 3 ? 'eager' : 'lazy';
+      image.fetchPriority = index < 3 ? 'high' : 'low';
       image.alt = `Bild von ${item.name}`;
       card.querySelector('.no-image').hidden = true;
       image.addEventListener('load', () => image.classList.remove('is-loading'), { once: true });
@@ -440,6 +442,29 @@ async function signedImageUrl(path) {
   return url;
 }
 
+async function prepareImageLinks(rows) {
+  const cacheKey = `verkaufsliste-image-links:${state.session.user.id}`;
+  // Reuse the exact URL so that the browser can reuse the downloaded image.
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(cacheKey) || '[]');
+    for (const [path, entry] of saved) {
+      if (entry.expiresAt > Date.now() + 60_000 && !signedImageCache.has(path)) signedImageCache.set(path, entry);
+    }
+  } catch { /* Caching is optional when browser storage is unavailable. */ }
+  const paths = [...new Set(rows.map((row) => row.image_path).filter(Boolean))];
+  const missing = paths.filter((path) => !signedImageCache.has(path) || signedImageCache.get(path).expiresAt <= Date.now() + 60_000);
+  for (let offset = 0; offset < missing.length; offset += 100) {
+    const { data, error } = await supabaseClient.storage.from(IMAGE_BUCKET).createSignedUrls(missing.slice(offset, offset + 100), 86_400);
+    if (error) throw error;
+    for (const entry of data || []) {
+      if (entry.signedUrl && !entry.error) signedImageCache.set(entry.path, { url: entry.signedUrl, expiresAt: Date.now() + 86_400_000 });
+    }
+  }
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(paths.filter((path) => signedImageCache.has(path)).map((path) => [path, signedImageCache.get(path)])));
+  } catch { /* Continue normally without the optional cache. */ }
+}
+
 function sameRemoteItems(previousItems, nextItems) {
   if (previousItems.length !== nextItems.length) return false;
   return previousItems.every((item, index) => {
@@ -449,6 +474,7 @@ function sameRemoteItems(previousItems, nextItems) {
       && item.price === next.price
       && item.description === next.description
       && item.imagePath === next.imagePath
+      && item.image === next.image
       && item.sold === next.sold
       && itemSection(item) === itemSection(next)
       && item.readyForSale === next.readyForSale
@@ -463,6 +489,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   if (!silent) setSyncStatus('Synchronisiere …');
   const { data, error } = await supabaseClient.from('selling_items').select('*').order('created_at', { ascending: false });
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
+  await prepareImageLinks(data || []);
   const nextItems = await Promise.all((data || []).map(async (row) => ({
     category: row.category || 'selling',
     id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), readyForSale: Boolean(row.ready_for_sale), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
@@ -480,6 +507,12 @@ function scheduleRemoteRefresh() {
 }
 
 async function handleSession(session) {
+  if (state.session?.user.id !== session?.user.id) {
+    if (state.session) {
+      try { sessionStorage.removeItem(`verkaufsliste-image-links:${state.session.user.id}`); } catch { /* optional cache */ }
+    }
+    signedImageCache.clear();
+  }
   state.session = session;
   if (session) {
     elements.authButton.textContent = 'Abmelden';
