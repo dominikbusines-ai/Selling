@@ -1,6 +1,8 @@
 const SUPABASE_URL = 'https://kfriqckayjehbigvrnys.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq';
 const STORAGE_KEY = 'verkaufsliste-items-v1';
+const SEARCH_KEY = 'verkaufsliste-search-v1';
+const savedSearch = loadSearch();
 const IMAGE_BUCKET = 'selling-images';
 const AI_IMAGE_MAX_EDGE = 1800;
 const signedImageCache = new Map();
@@ -18,7 +20,8 @@ const supabaseClient = window.supabase?.createClient
   : null;
 
 const state = {
-  section: location.hash === '#wertgegenstaende' ? 'valuables' : 'selling',
+  section: location.hash ? (location.hash === '#wertgegenstaende' ? 'valuables' : 'selling') : savedSearch.section,
+  search: savedSearch.queries,
   formSection: 'selling',
   items: loadLocalItems(),
   session: null,
@@ -42,6 +45,7 @@ const state = {
 };
 
 const elements = {
+  search: document.querySelector('#item-search'), clearSearch: document.querySelector('#clear-search'), searchStatus: document.querySelector('#search-status'),
   grid: document.querySelector('#item-grid'), empty: document.querySelector('#empty-state'), total: document.querySelector('#total-value'), count: document.querySelector('#item-count'),
   backdrop: document.querySelector('#modal-backdrop'), form: document.querySelector('#item-form'), formTitle: document.querySelector('#form-title'), formEyebrow: document.querySelector('#form-eyebrow'), error: document.querySelector('#form-error'),
   id: document.querySelector('#item-id'), name: document.querySelector('#item-name'), price: document.querySelector('#item-price'), description: document.querySelector('#item-description'), image: document.querySelector('#item-image'), imageUploadButton: document.querySelector('#image-upload-button'), preview: document.querySelector('#upload-preview'), removeImage: document.querySelector('#remove-image-button'), deleteItem: document.querySelector('#delete-item-button'), formAi: document.querySelector('#open-ai-from-form'),
@@ -52,6 +56,20 @@ const elements = {
 
 function loadLocalItems() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+
+function loadSearch() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SEARCH_KEY));
+    return {
+      section: saved?.section === 'valuables' ? 'valuables' : 'selling',
+      queries: Object.fromEntries(['selling', 'valuables'].map((section) => [section, typeof saved?.queries?.[section] === 'string' ? saved.queries[section] : '']))
+    };
+  } catch { return { section: 'selling', queries: { selling: '', valuables: '' } }; }
+}
+
+function saveSearch() {
+  try { localStorage.setItem(SEARCH_KEY, JSON.stringify({ section: state.section, queries: state.search })); } catch { /* Search still works when browser storage is unavailable. */ }
 }
 
 function saveLocalItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items)); }
@@ -91,6 +109,13 @@ function updateSection() {
 function render() {
   updateSection();
   const items = visibleItems();
+  const query = state.search[state.section];
+  const term = query.trim().toLocaleLowerCase('de-DE');
+  const matches = items.filter((item) => String(item.name || '').toLocaleLowerCase('de-DE').includes(term));
+  if (elements.search.value !== query) elements.search.value = query;
+  elements.clearSearch.hidden = !query;
+  elements.searchStatus.hidden = !term;
+  elements.searchStatus.textContent = !term ? '' : matches.length ? `${matches.length} von ${items.length} Artikeln gefunden` : 'Keine Artikel mit diesem Namen gefunden.';
   elements.grid.innerHTML = '';
   elements.grid.classList.toggle('compact-view', state.compactView);
   elements.empty.hidden = items.length > 0;
@@ -103,7 +128,7 @@ function render() {
   elements.soldValue.textContent = money.format(soldTotal);
   elements.soldCount.textContent = `${soldItems.length} verkauft · Details öffnen`;
 
-  items.forEach((item, index) => {
+  matches.forEach((item, index) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
     card.querySelector('.item-name').textContent = item.name;
@@ -680,7 +705,19 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 window.addEventListener('hashchange', () => {
   state.section = location.hash === '#wertgegenstaende' ? 'valuables' : 'selling';
+  saveSearch();
   render();
+});
+elements.search.addEventListener('input', () => {
+  state.search[state.section] = elements.search.value;
+  saveSearch();
+  render();
+});
+elements.clearSearch.addEventListener('click', () => {
+  state.search[state.section] = '';
+  saveSearch();
+  render();
+  elements.search.focus();
 });
 updateSection();
 updateViewToggle();

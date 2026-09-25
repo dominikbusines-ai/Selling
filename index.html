@@ -62,6 +62,15 @@
           </div>
         </div>
 
+        <div class="inventory-search" role="search" aria-label="Artikel suchen">
+          <label for="item-search">Nach Namen suchen</label>
+          <div class="search-controls">
+            <input id="item-search" type="search" placeholder="Artikelname eingeben …" autocomplete="off" enterkeyhint="search" />
+            <button class="button button-quiet" id="clear-search" type="button" hidden>Zurücksetzen</button>
+          </div>
+          <p id="search-status" role="status" hidden></p>
+        </div>
+
         <div class="empty-state" id="empty-state">
           <div class="empty-icon" aria-hidden="true">◇</div>
           <h3>Noch nichts eingetragen</h3>
