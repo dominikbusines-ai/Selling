@@ -62,6 +62,60 @@ function scheduleSearchExpansion() {
 const IMAGE_BUCKET = 'selling-images';
 const AI_IMAGE_MAX_EDGE = 1800;
 const signedImageCache = new Map();
+let previewObserver;
+const previewQueue = new Set();
+let activePreviewLoads = 0;
+let previewFrame = 0;
+
+function pumpPreviewQueue() {
+  // Re-sort on scrolling so a jump down the page does not wait for images above it.
+  const viewportHeight = window.innerHeight;
+  const distance = (image) => {
+    const rect = image.getBoundingClientRect();
+    return rect.bottom < 0 ? -rect.bottom : Math.max(0, rect.top - viewportHeight);
+  };
+  const queued = [...previewQueue].filter((image) => image.isConnected)
+    .sort((a, b) => distance(a) - distance(b));
+  for (const image of queued) {
+    if (activePreviewLoads >= 4) break;
+    previewQueue.delete(image);
+    const src = image.dataset.previewSrc;
+    if (!src) continue;
+    delete image.dataset.previewSrc;
+    activePreviewLoads++;
+    image.fetchPriority = distance(image) === 0 ? 'high' : 'auto';
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      image.removeEventListener('load', done);
+      image.removeEventListener('error', done);
+      activePreviewLoads--;
+      pumpPreviewQueue();
+    };
+    image.addEventListener('load', done);
+    image.addEventListener('error', done);
+    image.src = src;
+    if (image.complete) done();
+  }
+}
+
+function preparePreviewLoading() {
+  previewObserver?.disconnect();
+  previewQueue.clear();
+  previewObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => {
+    entries.forEach(({ target, isIntersecting }) => {
+      if (isIntersecting) previewQueue.add(target);
+      else previewQueue.delete(target);
+    });
+    pumpPreviewQueue();
+  }, { rootMargin: '2000px 0px 4000px 0px' }) : null;
+}
+
+window.addEventListener('scroll', () => {
+  if (previewFrame || !previewQueue.size) return;
+  previewFrame = requestAnimationFrame(() => { previewFrame = 0; pumpPreviewQueue(); });
+}, { passive: true });
 const money = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const dateFormat = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const supabaseClient = window.supabase?.createClient
@@ -163,6 +217,7 @@ function updateSection() {
 }
 
 function render() {
+  preparePreviewLoading();
   updateSection();
   const items = visibleItems();
   const query = state.search[state.section];
@@ -206,19 +261,21 @@ function render() {
       image.hidden = false;
       image.classList.add('is-loading');
       image.decoding = 'async';
-      image.loading = index < 3 ? 'eager' : 'lazy';
-      image.fetchPriority = index < 3 ? 'high' : 'low';
+      // The observer handles the preload distance; native lazy loading would delay it again.
+      image.loading = 'eager';
+      image.fetchPriority = index < 3 ? 'high' : 'auto';
       image.alt = `Bild von ${item.name}`;
-      card.querySelector('.no-image').hidden = true;
+      const fallback = card.querySelector('.no-image');
+      fallback.hidden = true;
       image.addEventListener('load', () => image.classList.remove('is-loading'), { once: true });
       image.addEventListener('error', () => {
         image.classList.remove('is-loading');
         image.hidden = true;
-        const fallback = card.querySelector('.no-image');
         fallback.hidden = false;
         fallback.textContent = 'Bild konnte nicht geladen werden';
       }, { once: true });
-      image.src = item.image;
+      if (previewObserver) image.dataset.previewSrc = item.image;
+      else image.src = item.image;
       if (image.complete && image.naturalWidth > 0) image.classList.remove('is-loading');
     } else { image.hidden = true; }
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
@@ -237,6 +294,7 @@ function render() {
       openForm(item);
     });
     elements.grid.append(card);
+    if (item.image && previewObserver) previewObserver.observe(image);
   });
 }
 
