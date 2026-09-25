@@ -29,6 +29,10 @@ function scheduleSearchExpansion() {
 const IMAGE_BUCKET = 'selling-images';
 const AI_IMAGE_MAX_EDGE = 1800;
 const signedImageCache = new Map();
+function previewImageUrl(item) {
+  if (!item.imagePath || !item.image) return item.image;
+  return `/api/thumbnail?image=${encodeURIComponent(item.image)}`;
+}
 let previewObserver;
 const previewQueue = new Set();
 let activePreviewLoads = 0;
@@ -235,14 +239,20 @@ function render() {
       const fallback = card.querySelector('.no-image');
       fallback.hidden = true;
       image.addEventListener('load', () => image.classList.remove('is-loading'), { once: true });
+      let originalFallback = false;
       image.addEventListener('error', () => {
+        if (!originalFallback && previewImageUrl(item) !== item.image) {
+          originalFallback = true;
+          image.src = item.image;
+          return;
+        }
         image.classList.remove('is-loading');
         image.hidden = true;
         fallback.hidden = false;
         fallback.textContent = 'Bild konnte nicht geladen werden';
-      }, { once: true });
-      if (previewObserver) image.dataset.previewSrc = item.image;
-      else image.src = item.image;
+      });
+      if (previewObserver) image.dataset.previewSrc = previewImageUrl(item);
+      else image.src = previewImageUrl(item);
       if (image.complete && image.naturalWidth > 0) image.classList.remove('is-loading');
     } else { image.hidden = true; }
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));

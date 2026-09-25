@@ -56,6 +56,12 @@ Vor dem Deployment einmal `supabase-valuables.sql` im Supabase SQL Editor ausfü
 
 Die Navigation öffnet den eigenen Bereich über `#wertgegenstaende`. Dort werden Name, Wert und Bild gespeichert; Bearbeiten, Löschen, Kompaktansicht und Bildvergrößerung stehen ebenfalls zur Verfügung. Die Gesamtsumme enthält ausschließlich Wertgegenstände. Beschreibung, Verkaufsstatus, Bereit-Status und KI sind dort nicht verfügbar.
 
+## Mobile Bildvorschauen
+
+Karten verwenden `/api/thumbnail` für maximal 720 × 720 Pixel große WebP-Vorschauen. Die Großansicht behält das Original. Das funktioniert auch für bestehende Bilder ohne Datenbankänderung. Der Server akzeptiert ausschließlich signierte Links aus dem privaten `selling-images`-Bucket des konfigurierten Supabase-Projekts, prüft sie durch den Speicherabruf und speichert Antworten nur im privaten Browsercache (eine Stunde), nicht in einem öffentlichen CDN. Bei Fehlern lädt die Karte das Original.
+
+Vercel muss die neue Abhängigkeit `sharp` aus `package.json` und `package-lock.json` installieren; beide Dateien zusammen mit `api/thumbnail.js` veröffentlichen. Keine neue Umgebungsvariable erforderlich. Der erste Vorschauabruf benötigt weiterhin den serverseitigen Download und die Umwandlung des Originals. Originaldateien werden weder verändert noch gelöscht.
+
 ## KI-gestützte Suche
 
 Die Suche kombiniert Namen, Beschreibungen und automatisch erzeugte Suchbegriffe zu bekannten Modellen bzw. Produktarten. Beim Suchen werden noch nicht eingeordnete Artikel des aktuellen Bereichs in Gruppen von maximal acht Artikeln analysiert. Übertragen werden ausschließlich Name (maximal 120 Zeichen) und Beschreibungsauszug (maximal 700 Zeichen), keine Bilder. Unbekannte Modelle sollen nicht erraten werden.
