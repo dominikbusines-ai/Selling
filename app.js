@@ -3,6 +3,62 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq
 const STORAGE_KEY = 'verkaufsliste-items-v1';
 const SEARCH_KEY = 'verkaufsliste-search-v1';
 const savedSearch = loadSearch();
+const SEARCH_TERMS_KEY = 'verkaufsliste-search-terms-v1';
+const searchTermsCache = loadSearchTerms();
+const searchRequests = new Map();
+let searchTimer;
+let searchPhase = '';
+
+function normalizeSearch(value) {
+  return String(value || '').toLocaleLowerCase('de-DE').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss').trim();
+}
+
+function loadSearchTerms() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(SEARCH_TERMS_KEY));
+    return new Map(Array.isArray(rows) ? rows.filter((row) => Array.isArray(row) && typeof row[0] === 'string' && row[1]?.expires > Date.now() && Array.isArray(row[1]?.terms) && row[1].terms.every((term) => typeof term === 'string')).slice(-100) : []);
+  } catch { return new Map(); }
+}
+
+function cachedSearchTerms(term) {
+  const entry = searchTermsCache.get(term);
+  return entry?.expires > Date.now() ? entry.terms : null;
+}
+
+function scheduleSearchExpansion() {
+  clearTimeout(searchTimer);
+  const term = normalizeSearch(state.search[state.section]);
+  searchPhase = '';
+  if (!term || cachedSearchTerms(term)) return;
+  if (!state.session) { searchPhase = 'Für die KI-Suche bitte anmelden.'; return; }
+  if (term.length < 2 || term.length > 120) return;
+  searchPhase = 'KI ergänzt passende Suchbegriffe …';
+  searchTimer = setTimeout(async () => {
+    try {
+      if (!searchRequests.has(term)) {
+        searchRequests.set(term, (async () => {
+          const response = await fetch('/api/ai', {
+            method: 'POST', signal: AbortSignal.timeout(15000),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.session.access_token}` },
+            body: JSON.stringify({ task: 'search-terms', query: term })
+          });
+          const data = await response.json();
+          if (!response.ok || !Array.isArray(data.terms) || !data.terms.every((value) => typeof value === 'string')) throw new Error('Search unavailable');
+          searchTermsCache.set(term, { terms: data.terms.slice(0, 12).map(normalizeSearch).filter(Boolean), expires: Date.now() + 30 * 86400000 });
+          while (searchTermsCache.size > 100) searchTermsCache.delete(searchTermsCache.keys().next().value);
+          try { localStorage.setItem(SEARCH_TERMS_KEY, JSON.stringify([...searchTermsCache])); } catch { /* Keep the in-memory cache. */ }
+        })());
+      }
+      await searchRequests.get(term);
+      if (normalizeSearch(state.search[state.section]) === term) searchPhase = '';
+    } catch {
+      if (normalizeSearch(state.search[state.section]) === term) searchPhase = 'KI nicht verfügbar – lokale Textsuche aktiv.';
+    } finally {
+      searchRequests.delete(term);
+      if (normalizeSearch(state.search[state.section]) === term) render();
+    }
+  }, 900);
+}
 const IMAGE_BUCKET = 'selling-images';
 const AI_IMAGE_MAX_EDGE = 1800;
 const signedImageCache = new Map();
@@ -110,12 +166,18 @@ function render() {
   updateSection();
   const items = visibleItems();
   const query = state.search[state.section];
-  const term = query.trim().toLocaleLowerCase('de-DE');
-  const matches = items.filter((item) => String(item.name || '').toLocaleLowerCase('de-DE').includes(term));
+  const term = normalizeSearch(query);
+  const expanded = cachedSearchTerms(term);
+  const terms = [term, ...(expanded || [])];
+  const matches = items.filter((item) => {
+    const text = normalizeSearch(`${item.name || ''} ${item.description || ''}`);
+    return terms.some((value) => text.includes(value));
+  });
   if (elements.search.value !== query) elements.search.value = query;
   elements.clearSearch.hidden = !query;
   elements.searchStatus.hidden = !term;
   elements.searchStatus.textContent = !term ? '' : matches.length ? `${matches.length} von ${items.length} Artikeln gefunden` : 'Keine Artikel mit diesem Namen gefunden.';
+  if (term) elements.searchStatus.textContent = `${matches.length} von ${items.length} Artikeln gefunden. ${expanded ? 'KI-Suche aktiv.' : searchPhase}`;
   elements.grid.innerHTML = '';
   elements.grid.classList.toggle('compact-view', state.compactView);
   elements.empty.hidden = items.length > 0;
@@ -539,6 +601,7 @@ async function handleSession(session) {
     signedImageCache.clear();
   }
   state.session = session;
+  scheduleSearchExpansion();
   if (session) {
     elements.authButton.textContent = 'Abmelden';
     setSyncStatus('Synchronisiere …');
@@ -706,16 +769,19 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 window.addEventListener('hashchange', () => {
   state.section = location.hash === '#wertgegenstaende' ? 'valuables' : 'selling';
   saveSearch();
+  scheduleSearchExpansion();
   render();
 });
 elements.search.addEventListener('input', () => {
   state.search[state.section] = elements.search.value;
   saveSearch();
+  scheduleSearchExpansion();
   render();
 });
 elements.clearSearch.addEventListener('click', () => {
   state.search[state.section] = '';
   saveSearch();
+  scheduleSearchExpansion();
   render();
   elements.search.focus();
 });
@@ -724,4 +790,4 @@ updateViewToggle();
 if (supabaseClient) {
   supabaseClient.auth.onAuthStateChange((_event, session) => window.setTimeout(() => handleSession(session), 0));
   supabaseClient.auth.getSession().then(({ data }) => handleSession(data.session)).catch(() => setSyncStatus('Anmeldung nicht verfügbar', 'error'));
-} else { setSyncStatus('Supabase nicht geladen', 'error'); render(); }
+} else { setSyncStatus('Supabase nicht geladen', 'error'); scheduleSearchExpansion(); render(); }

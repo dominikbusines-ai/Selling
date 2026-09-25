@@ -63,9 +63,9 @@
         </div>
 
         <div class="inventory-search" role="search" aria-label="Artikel suchen">
-          <label for="item-search">Nach Namen suchen</label>
+          <label for="item-search">Artikel suchen · KI-gestützt</label>
           <div class="search-controls">
-            <input id="item-search" type="search" placeholder="Artikelname eingeben …" autocomplete="off" enterkeyhint="search" />
+            <input id="item-search" type="search" placeholder="z. B. Lampe oder Controller …" maxlength="120" autocomplete="off" enterkeyhint="search" aria-describedby="search-status" />
             <button class="button button-quiet" id="clear-search" type="button" hidden>Zurücksetzen</button>
           </div>
           <p id="search-status" role="status" hidden></p>
