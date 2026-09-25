@@ -5,8 +5,6 @@ const SEARCH_KEY = 'verkaufsliste-search-v1';
 const savedSearch = loadSearch();
 const SEARCH_TERMS_KEY = 'verkaufsliste-search-terms-v1';
 const searchTermsCache = loadSearchTerms();
-const searchRequests = new Map();
-let searchTimer;
 let searchPhase = '';
 
 function normalizeSearch(value) {
@@ -26,38 +24,7 @@ function cachedSearchTerms(term) {
 }
 
 function scheduleSearchExpansion() {
-  clearTimeout(searchTimer);
-  const term = normalizeSearch(state.search[state.section]);
-  searchPhase = '';
-  if (!term || cachedSearchTerms(term)) return;
-  if (!state.session) { searchPhase = 'Für die KI-Suche bitte anmelden.'; return; }
-  if (term.length < 2 || term.length > 120) return;
-  searchPhase = 'KI ergänzt passende Suchbegriffe …';
-  searchTimer = setTimeout(async () => {
-    try {
-      if (!searchRequests.has(term)) {
-        searchRequests.set(term, (async () => {
-          const response = await fetch('/api/ai', {
-            method: 'POST', signal: AbortSignal.timeout(15000),
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.session.access_token}` },
-            body: JSON.stringify({ task: 'search-terms', query: term })
-          });
-          const data = await response.json();
-          if (!response.ok || !Array.isArray(data.terms) || !data.terms.every((value) => typeof value === 'string')) throw new Error('Search unavailable');
-          searchTermsCache.set(term, { terms: data.terms.slice(0, 12).map(normalizeSearch).filter(Boolean), expires: Date.now() + 30 * 86400000 });
-          while (searchTermsCache.size > 100) searchTermsCache.delete(searchTermsCache.keys().next().value);
-          try { localStorage.setItem(SEARCH_TERMS_KEY, JSON.stringify([...searchTermsCache])); } catch { /* Keep the in-memory cache. */ }
-        })());
-      }
-      await searchRequests.get(term);
-      if (normalizeSearch(state.search[state.section]) === term) searchPhase = '';
-    } catch {
-      if (normalizeSearch(state.search[state.section]) === term) searchPhase = 'KI nicht verfügbar – lokale Textsuche aktiv.';
-    } finally {
-      searchRequests.delete(term);
-      if (normalizeSearch(state.search[state.section]) === term) render();
-    }
-  }, 900);
+  scheduleInventorySearch();
 }
 const IMAGE_BUCKET = 'selling-images';
 const AI_IMAGE_MAX_EDGE = 1800;
@@ -225,14 +192,14 @@ function render() {
   const expanded = cachedSearchTerms(term);
   const terms = [term, ...(expanded || [])];
   const matches = items.filter((item) => {
-    const text = normalizeSearch(`${item.name || ''} ${item.description || ''}`);
+    const text = normalizeSearch(`${item.name || ''} ${item.description || ''} ${itemSearchTags(item).join(' ')}`);
     return terms.some((value) => text.includes(value));
   });
   if (elements.search.value !== query) elements.search.value = query;
   elements.clearSearch.hidden = !query;
   elements.searchStatus.hidden = !term;
   elements.searchStatus.textContent = !term ? '' : matches.length ? `${matches.length} von ${items.length} Artikeln gefunden` : 'Keine Artikel mit diesem Namen gefunden.';
-  if (term) elements.searchStatus.textContent = `${matches.length} von ${items.length} Artikeln gefunden. ${expanded ? 'KI-Suche aktiv.' : searchPhase}`;
+  if (term) elements.searchStatus.textContent = `${matches.length} von ${items.length} Artikeln gefunden. ${searchPhase}`;
   elements.grid.innerHTML = '';
   elements.grid.classList.toggle('compact-view', state.compactView);
   elements.empty.hidden = items.length > 0;
@@ -641,6 +608,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   })));
   if (!sameRemoteItems(state.items, nextItems)) {
     state.items = nextItems;
+    scheduleSearchExpansion();
     render();
   }
   setSyncStatus('Synchronisiert', 'online');

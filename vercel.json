@@ -6,7 +6,7 @@
       { "key": "Cache-Control", "value": "no-cache" },
       { "key": "Service-Worker-Allowed", "value": "/" }
     ] },
-    { "source": "/(app.js|pwa.js|style.css|manifest.json)", "headers": [
+    { "source": "/(app.js|search-engine.js|pwa.js|style.css|manifest.json)", "headers": [
       { "key": "Cache-Control", "value": "no-cache" }
     ] }
   ]

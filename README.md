@@ -56,6 +56,14 @@ Vor dem Deployment einmal `supabase-valuables.sql` im Supabase SQL Editor ausfü
 
 Die Navigation öffnet den eigenen Bereich über `#wertgegenstaende`. Dort werden Name, Wert und Bild gespeichert; Bearbeiten, Löschen, Kompaktansicht und Bildvergrößerung stehen ebenfalls zur Verfügung. Die Gesamtsumme enthält ausschließlich Wertgegenstände. Beschreibung, Verkaufsstatus, Bereit-Status und KI sind dort nicht verfügbar.
 
+## KI-gestützte Suche
+
+Die Suche kombiniert Namen, Beschreibungen und automatisch erzeugte Suchbegriffe zu bekannten Modellen bzw. Produktarten. Beim Suchen werden noch nicht eingeordnete Artikel des aktuellen Bereichs in Gruppen von maximal acht Artikeln analysiert. Übertragen werden ausschließlich Name (maximal 120 Zeichen) und Beschreibungsauszug (maximal 700 Zeichen), keine Bilder. Unbekannte Modelle sollen nicht erraten werden.
+
+Einordnungen werden pro Benutzer im Browser gespeichert und bei Änderungen an Name oder Beschreibung erneuert. Andere Geräte bzw. gelöschte Browserdaten benötigen eine neue Erstanalyse. Die zusätzliche Erweiterung des Suchbegriffs bleibt erhalten und wird 30 Tage zwischengespeichert. Es ist keine weitere Umgebungsvariable oder Datenbankmigration nötig.
+
+Der Fortschrittsbalken zählt überprüfbare Arbeitseinheiten: einen Schritt pro eingeordnetem Artikel, einen für die Begriffserweiterung und einen für die abgeschlossene lokale Filterung. Gespeicherte Einordnungen zählen sofort. Während einer API-Anfrage steigt der Balken nicht künstlich an. Die Prozentzahl ist keine Zeitprognose oder Messung der internen Modellberechnung. Bei Fehlern bleibt die Suche als unvollständig gekennzeichnet; Texttreffer und vorhandene Einordnungen bleiben verfügbar.
+
 ## Verkaufsstatus einrichten
 
 Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Das Skript ergänzt den Verkaufsstatus und den Status „Bereit zum Verkauf“. Danach können Gegenstände als verkauft oder als fertig eingerichtet markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.

@@ -185,6 +185,10 @@ textarea { resize: vertical; }
 .sold-row-price { color: var(--green); font-size: 15px; font-weight: 700; white-space: nowrap; }
 
 .inventory-search { margin-bottom: 24px; }
+#search-progress-wrap { margin-top: 10px; }
+#search-progress-wrap[hidden] { display: none; }
+#search-progress { display: block; width: 100%; height: 8px; accent-color: var(--green); }
+#search-progress-label { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
 .inventory-search label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
 .search-controls { display: flex; gap: 8px; }
 .search-controls input { min-width: 0; flex: 1; }
