@@ -1,6 +1,24 @@
 const SUPABASE_URL = 'https://kfriqckayjehbigvrnys.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qe872JZtouSldyBjzwjR6Q_NpGaTyyq';
 const STORAGE_KEY = 'verkaufsliste-items-v1';
+// Keep position only for this living page, never across a fresh app launch.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+let suspendedPagePosition = null;
+
+function rememberPagePosition() {
+  suspendedPagePosition = {
+    section: state.section,
+    y: document.documentElement.classList.contains('modal-open') ? state.scrollLockY : window.scrollY
+  };
+}
+
+function resumePagePosition() {
+  const saved = suspendedPagePosition;
+  suspendedPagePosition = null;
+  if (!saved || saved.section !== state.section) return;
+  if (document.documentElement.classList.contains('modal-open')) return;
+  window.scrollTo({ top: saved.y, left: 0, behavior: 'instant' });
+}
 const SEARCH_KEY = 'verkaufsliste-search-v1';
 const savedSearch = loadSearch();
 const SEARCH_TERMS_KEY = 'verkaufsliste-search-terms-v1';
@@ -188,6 +206,7 @@ function updateSection() {
 }
 
 function render() {
+  const previousScrollY = window.scrollY;
   preparePreviewLoading();
   updateSection();
   const items = visibleItems();
@@ -273,6 +292,9 @@ function render() {
     elements.grid.append(card);
     if (item.image && previewObserver) previewObserver.observe(image);
   });
+  if (!document.documentElement.classList.contains('modal-open')) {
+    window.scrollTo({ top: previousScrollY, left: 0, behavior: 'instant' });
+  }
 }
 
 function updateViewToggle() {
@@ -406,6 +428,7 @@ function lockPageScroll() {
 }
 
 function unlockPageScroll() {
+  if (!document.documentElement.classList.contains('modal-open')) return;
   const scrollY = state.scrollLockY;
   document.documentElement.classList.remove('modal-open');
   document.body.classList.remove('modal-open');
@@ -418,7 +441,11 @@ function unlockPageScroll() {
   window.scrollTo(0, scrollY);
 }
 
-function closeAuth() { elements.authBackdrop.hidden = true; unlockPageScroll(); }
+function closeAuth() {
+  if (elements.authBackdrop.hidden) return;
+  elements.authBackdrop.hidden = true;
+  unlockPageScroll();
+}
 
 const AI_TASKS = {
   'write-description': 'Schreibe 3 bis 5 kurze, produktspezifische Stichpunkte auf Deutsch. Verwende nur gesicherte Angaben aus Produktname, Beschreibung und eindeutig sichtbaren Bildmerkmalen. Erfinde keine Details und vermeide allgemeine Werbesätze.',
@@ -800,7 +827,17 @@ elements.aiBackdrop.addEventListener('click', (event) => { if (event.target === 
 document.querySelectorAll('.ai-action').forEach((button) => button.addEventListener('click', () => runAiTask(button.dataset.aiAction)));
 elements.aiAsk.addEventListener('click', askAiQuestion);
 elements.aiApply.addEventListener('click', applyAiResult);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.session) loadRemoteItems({ silent: true }).catch(() => {}); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') rememberPagePosition();
+  else {
+    resumePagePosition();
+    if (state.session) loadRemoteItems({ silent: true }).catch(() => {});
+  }
+});
+window.addEventListener('pagehide', rememberPagePosition);
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) resumePagePosition();
+});
 
 window.addEventListener('hashchange', () => {
   state.section = location.hash === '#wertgegenstaende' ? 'valuables' : 'selling';
