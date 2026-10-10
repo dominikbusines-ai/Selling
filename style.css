@@ -135,6 +135,15 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 html.modal-open, body.modal-open { overflow: hidden !important; overscroll-behavior: none; }
 .close-button { position: absolute; z-index: 20; top: 13px; right: 13px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; color: var(--muted); background: var(--paper); font-size: 22px; line-height: 1; touch-action: manipulation; }
 .modal h2 { margin-bottom: 26px; }
+.listing-copy-dialog { margin: auto; border: 1px solid var(--line); width: min( calc(100% - 32px), 420px); }
+.listing-copy-dialog::backdrop { background: rgba(35, 37, 34, .42); }
+.listing-copy-dialog h2 { margin-bottom: 12px; padding-right: 30px; font-size: 22px; }
+.listing-copy-hint { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.listing-copy-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.listing-copy-actions .button { min-height: 44px; padding: 10px 14px; font-size: 13px; }
+.listing-copy-status { min-height: 20px; margin: 10px 0; font-size: 13px; }
+.listing-copy-link { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font-size: 13px; text-underline-offset: 3px; }
+.listing-copy-manual { width: 100%; min-height: 100px; margin-bottom: 10px; font-size: 16px; }
 .form-fields { display: grid; gap: 17px; }
 label:not(.image-upload) > span { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 700; }
 small { color: var(--muted); font-size: 11px; font-weight: 400; }

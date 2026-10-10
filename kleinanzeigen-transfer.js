@@ -2,7 +2,7 @@
 async function prepareKleinanzeigenDraft(item, button) {
   if (!item || item.sold || itemSection(item) !== 'selling') return;
   if (document.documentElement.dataset.sellingBridge !== '1') {
-    alert('Bitte zuerst die Selling-Erweiterung in Firefox, Chrome oder Edge am PC installieren. Die Anleitung liegt im Projekt unter kleinanzeigen-extension/README.md. Auf dem iPhone wird diese Erweiterung nicht unterstützt.');
+    openManualListing(item, button);
     return;
   }
   if (!confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Bitte danach Kategorie, Versand und alle Angaben prüfen. Es wird nichts automatisch veröffentlicht und Ihr Eintrag bleibt unverändert.`)) return;
@@ -49,4 +49,66 @@ async function prepareKleinanzeigenDraft(item, button) {
     });
   } catch (error) { alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
   finally { button.disabled = false; button.textContent = previous; }
+}
+
+// Clipboard-only fallback: never changes an item or sends it to another service.
+function openManualListing(item, trigger) {
+  if (document.querySelector('.listing-copy-dialog')) return;
+  const dialog = document.createElement('dialog');
+  dialog.className = 'modal listing-copy-dialog';
+  dialog.setAttribute('aria-labelledby', 'listing-copy-title');
+  dialog.innerHTML = `<button type="button" class="close-button" aria-label="Schließen">×</button>
+    <h2 id="listing-copy-title">Für Kleinanzeigen</h2>
+    <p class="listing-copy-hint">Gespeicherte Angaben kopieren und bei Kleinanzeigen einfügen.</p>
+    <div class="listing-copy-actions"></div>
+    <p class="listing-copy-status" role="status" aria-live="polite"></p>
+    <textarea class="listing-copy-manual" aria-label="Text zum manuellen Kopieren" readonly hidden></textarea>
+    <a class="listing-copy-link" href="https://www.kleinanzeigen.de/p-anzeige-aufgeben.html" target="_blank" rel="noopener noreferrer">Kleinanzeigen öffnen ↗</a>
+    <p class="listing-copy-hint">Bild und Kategorie dort auswählen. Versand: „Nur Abholung“.</p>`;
+  const status = dialog.querySelector('.listing-copy-status');
+  const manual = dialog.querySelector('textarea');
+  const fields = [
+    ['Titel', item.name],
+    ['Beschreibung', item.description || ''],
+    ['Preis', Number(item.price).toFixed(2).replace('.', ',')]
+  ];
+  for (const [label, value] of fields) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-quiet';
+    button.textContent = label;
+    button.setAttribute('aria-label', `${label} kopieren`);
+    button.disabled = !value;
+    button.addEventListener('click', async () => {
+      manual.hidden = true;
+      try {
+        // Called directly in the tap handler for iOS clipboard permission.
+        await navigator.clipboard.writeText(value);
+        status.textContent = `${label} kopiert.`;
+      } catch {
+        if (!dialog.open) return;
+        manual.value = value;
+        manual.hidden = false;
+        manual.focus({ preventScroll: true });
+        manual.select();
+        manual.setSelectionRange(0, value.length);
+        status.textContent = 'Bitte den markierten Text manuell kopieren.';
+      }
+    });
+    dialog.querySelector('.listing-copy-actions').append(button);
+  }
+  const ownsScrollLock = !document.documentElement.classList.contains('modal-open');
+  dialog.querySelector('.close-button').addEventListener('click', () => dialog.close());
+  // Keep Escape from closing the underlying edit form as well.
+  dialog.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dialog.close(); }
+  });
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    if (ownsScrollLock) unlockPageScroll();
+    if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+  }, { once: true });
+  document.body.append(dialog);
+  if (ownsScrollLock) lockPageScroll();
+  dialog.showModal();
 }
