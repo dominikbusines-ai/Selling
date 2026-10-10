@@ -1,4 +1,12 @@
-# Selling → Kleinanzeigen (PC, Version 0.2 – Live-Prüfung ausstehend)
+# Selling → Kleinanzeigen (PC, Version 0.3 – Live-Prüfung ausstehend)
+
+## Aktualisierung 0.3
+
+Nach Dateiänderungen das temporäre Add-on in `about:debugging` neu laden und den Kleinanzeigen-Tab ebenfalls neu laden. Preisfelder erhalten ganze Eurobeträge ohne Dezimalstellen; Text-/Telefonfelder verwenden für Centbeträge ein Komma, native Zahlenfelder einen Punkt. Bitte den Endpreis kontrollieren. „Nur Abholung“ wird einmalig über eine eindeutig beschriftete Radio- oder Auswahloption ausgewählt; wenn das Feld nicht erkannt wird, erscheint ein Hinweis statt einer geratenen Auswahl. Spätere manuelle Änderungen bleiben erhalten.
+
+Die Website schlägt auf Detailkarten eine KI-Kategorie vor. Grundlage sind die 147 Unterkategorien der öffentlichen Übersicht https://www.kleinanzeigen.de/s-kategorien.html, Stand 10.10.2026, gespeichert in `kleinanzeigen-categories.json`. Weitere kategoriespezifische Formularmerkmale sind nicht Bestandteil dieser Liste. Die Kategorie wird nicht automatisch im Fremdformular ausgewählt.
+
+Beim Laden der Verkaufsliste werden angemeldeten Nutzern Empfehlungen für unverkaufte Artikel in Gruppen von acht erstellt (nur Namen/Beschreibungsauszüge, keine Bilder). Ergebnisse werden benutzerspezifisch auf dem Gerät zwischengespeichert. Änderungen am Text oder der Kategorienliste lösen eine neue Prüfung aus. Das erzeugt beim ersten Öffnen KI-Kosten; erneutes Öffnen unveränderter Einträge verwendet die gespeicherten Ergebnisse. Keine Supabase-Datenänderung oder Migration.
 
 ## Firefox (ab Version 140): vorläufig installieren
 

@@ -12,7 +12,7 @@
   const normalize = (text) => String(text || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[\s:*]+$/g, '');
   const visible = (element) => !element.disabled && !element.readOnly && element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden';
   function fieldsFor(names, textarea = false) {
-    return [...document.querySelectorAll(textarea ? 'textarea' : 'input:not([type]),input[type="text"],input[type="number"]')].filter((element) => visible(element) && [element.name, element.id, element.getAttribute('aria-label'), ...[...(element.labels || [])].map((label) => label.textContent)].some((label) => names.includes(normalize(label))));
+    return [...document.querySelectorAll(textarea ? 'textarea' : 'input:not([type]),input[type="text"],input[type="number"],input[type="tel"]')].filter((element) => visible(element) && [element.name, element.id, element.getAttribute('aria-label'), ...[...(element.labels || [])].map((label) => label.textContent)].some((label) => names.includes(normalize(label))));
   }
   function fillText(names, value, title, textarea = false) {
     const matches = fieldsFor(names, textarea);
@@ -20,13 +20,31 @@
     const field = matches[0];
     if (applied.has(field)) return `${title}: bereits übertragen`;
     if (field.value.trim()) return `${title}: vorhandener Inhalt bleibt unverändert`;
+    if (title === 'Preis') value = field.type === 'number' ? String(draft.price) : String(draft.price).replace('.', ',');
     if (field.maxLength > 0 && value.length > field.maxLength) return `${title}: zu lang, bitte kürzen und manuell eintragen`;
     const prototype = textarea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     Object.getOwnPropertyDescriptor(prototype, 'value').set.call(field, value);
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
+    field.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    if (field.value !== value) return `${title}: Eingabe nicht übernommen – bitte manuell prüfen`;
     applied.add(field);
     return `${title}: eingetragen – bitte prüfen`;
+  }
+  function pickupOnly() {
+    const labels = [...document.querySelectorAll('label')].filter((label) => normalize(label.textContent) === 'nur abholung' && label.getClientRects().length);
+    const radios = labels.map((label) => label.control).filter((field) => field?.type === 'radio' && !field.disabled);
+    if (radios.length === 1) {
+      if (!applied.has(radios[0])) { radios[0].click(); applied.add(radios[0]); }
+      return radios[0].checked ? 'Nur Abholung: ausgewählt' : 'Abholung wurde geändert – bitte prüfen';
+    }
+    const selects = [...document.querySelectorAll('select')].filter(visible).map((select) => ({ select, options: [...select.options].filter((option) => normalize(option.textContent) === 'nur abholung') })).filter((entry) => entry.options.length === 1);
+    if (selects.length === 1) {
+      const { select, options } = selects[0];
+      if (!applied.has(select)) { select.value = options[0].value; select.dispatchEvent(new Event('change', { bubbles: true })); applied.add(select); }
+      return select.value === options[0].value ? 'Nur Abholung: ausgewählt' : 'Abholung wurde geändert – bitte prüfen';
+    }
+    return 'Nur Abholung: Auswahl nicht eindeutig gefunden – bitte selbst auswählen';
   }
   async function fill() {
     const button = shadow.querySelector('#fill');
@@ -35,7 +53,8 @@
     try {
       notes.push(fillText(['titel', 'title', 'adtitle', 'ad-title'], draft.name, 'Titel'));
       notes.push(fillText(['beschreibung', 'description', 'addescription', 'ad-description'], draft.description, 'Beschreibung', true));
-      notes.push(fillText(['preis', 'preis in €', 'price', 'adprice', 'ad-price'], draft.price.toFixed(2), 'Preis'));
+      notes.push(fillText(['preis', 'preis in €', 'price', 'adprice', 'ad-price', 'priceamount', 'price.amount'], String(draft.price), 'Preis'));
+      notes.push(pickupOnly());
       if (draft.image) {
         const fields = [...document.querySelectorAll('input[type="file"]')].filter((field) => !field.disabled && /image|\.jpe?g|\.png/i.test(field.accept));
         if (fields.length !== 1) notes.push('Bild: Uploadfeld nicht eindeutig gefunden');
@@ -55,6 +74,6 @@
   }
   shadow.querySelector('#fill').addEventListener('click', fill);
   shadow.querySelector('#close').addEventListener('click', async () => { await extensionApi.runtime.sendMessage({ type: 'discard' }); host.remove(); });
-  // No clicks on site controls, submit calls, category guesses, or CAPTCHA interaction.
+  // Only the explicit pickup option may be clicked; never submit or interact with CAPTCHA.
   await fill();
 })();

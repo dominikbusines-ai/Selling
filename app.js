@@ -276,6 +276,10 @@ function render() {
     } else { image.hidden = true; }
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
     const listingButton = card.querySelector('.listing-button');
+    const categoryLabel = card.querySelector('.listing-category');
+    categoryLabel.dataset.itemId = item.id;
+    categoryLabel.hidden = Boolean(item.sold || itemSection(item) !== 'selling');
+    categoryLabel.addEventListener('click', () => scheduleListingCategories(true));
     listingButton.hidden = Boolean(item.sold || itemSection(item) !== 'selling');
     listingButton.addEventListener('click', () => prepareKleinanzeigenDraft(item, listingButton));
     itemCard.classList.toggle('is-compact', state.compactView);
@@ -298,6 +302,7 @@ function render() {
   if (!document.documentElement.classList.contains('modal-open')) {
     window.scrollTo({ top: previousScrollY, left: 0, behavior: 'instant' });
   }
+  scheduleListingCategories();
 }
 
 function updateViewToggle() {
