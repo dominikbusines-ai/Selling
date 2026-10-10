@@ -2,7 +2,7 @@
 async function prepareKleinanzeigenDraft(item, button) {
   if (!item || item.sold || itemSection(item) !== 'selling') return;
   if (document.documentElement.dataset.sellingBridge !== '1') {
-    alert('Bitte zuerst die Selling-Erweiterung in Chrome oder Edge am PC installieren. Die Anleitung liegt im Projekt unter kleinanzeigen-extension/README.md. Auf dem iPhone wird diese Erweiterung nicht unterstützt.');
+    alert('Bitte zuerst die Selling-Erweiterung in Firefox, Chrome oder Edge am PC installieren. Die Anleitung liegt im Projekt unter kleinanzeigen-extension/README.md. Auf dem iPhone wird diese Erweiterung nicht unterstützt.');
     return;
   }
   if (!confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Bitte danach Kategorie, Versand und alle Angaben prüfen. Es wird nichts automatisch veröffentlicht und Ihr Eintrag bleibt unverändert.`)) return;
@@ -31,9 +31,12 @@ async function prepareKleinanzeigenDraft(item, button) {
     await new Promise((resolve, reject) => {
       const cleanup = () => { clearTimeout(timer); window.removeEventListener('message', receive); };
       const receive = (event) => {
-        if (event.source !== window || event.origin !== location.origin || event.data?.type !== 'SELLING_DRAFT_RESULT' || event.data.requestId !== requestId) return;
+        if (event.source !== window || event.origin !== location.origin) return;
+        let result;
+        try { result = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; } catch { return; }
+        if (result?.type !== 'SELLING_DRAFT_RESULT' || result.requestId !== requestId) return;
         cleanup();
-        event.data.ok ? resolve() : reject(new Error(event.data.error || 'Übergabe fehlgeschlagen.'));
+        result.ok ? resolve() : reject(new Error(result.error || 'Übergabe fehlgeschlagen.'));
       };
       const timer = setTimeout(() => { cleanup(); reject(new Error('Keine Bestätigung der Erweiterung. Bitte geöffnete Kleinanzeigen-Tabs prüfen, bevor Sie erneut übertragen.')); }, 15000);
       window.addEventListener('message', receive);

@@ -1,4 +1,17 @@
-# Selling → Kleinanzeigen (PC, Version 0.1 – Live-Prüfung ausstehend)
+# Selling → Kleinanzeigen (PC, Version 0.2 – Live-Prüfung ausstehend)
+
+## Firefox (ab Version 140): vorläufig installieren
+
+1. `about:debugging#/runtime/this-firefox` in Firefox öffnen.
+2. „Temporäres Add-on laden …“ anklicken.
+3. `C:\Users\Kunde\Projekte\Selling\kleinanzeigen-extension\manifest.json` auswählen.
+4. Die veröffentlichte Selling-Website neu laden. Falls Firefox den Website-Zugriff anfragt, für Selling und Kleinanzeigen erlauben.
+
+Das temporäre Add-on wird beim vollständigen Beenden von Firefox entfernt. Für die dauerhafte Installation in regulärem Firefox ist eine von Mozilla signierte Erweiterung nötig, auch bei privater/unveröffentlichter Verteilung. Die Signierung wurde nicht vorgenommen. Sicherheitsprüfungen nicht deaktivieren.
+
+Die Firefox-Einwilligung nennt „Website-Inhalte“, weil der ausdrücklich ausgewählte Artikel mit Bild an Kleinanzeigen übergeben wird. Keine Analysedienste oder Übermittlung anderer Artikel. Ihre Bestätigung vor jeder Übergabe bleibt erhalten.
+
+Quellen: https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/ und https://extensionworkshop.com/documentation/publish/install-self-distributed/
 
 ## Schutz bestehender Daten
 
@@ -12,7 +25,7 @@ Diese Erweiterung liest einen ausdrücklich freigegebenen Artikel. Sie hat keine
 4. Diesen Ordner `kleinanzeigen-extension` auswählen (nicht den gesamten Selling-Ordner).
 5. `https://selling-tau.vercel.app` neu laden. In der Website erscheint „Inserieren“ bei unverkauften Verkaufsartikeln; auch im Bearbeitungsfenster verfügbar.
 
-Die Erweiterung ist nur für diese konkrete Selling-Adresse freigegeben. Bei einer anderen Domain müssen `manifest.json`, `bridge.js` und `background.js` ausdrücklich angepasst werden. Kein iPhone-Support für diese Chrome-/Edge-Erweiterung.
+Die Erweiterung ist nur für diese konkrete Selling-Adresse freigegeben. Bei einer anderen Domain müssen `manifest.json`, `bridge.js` und `background.js` ausdrücklich angepasst werden. Kein iPhone-Support für diese PC-Erweiterung.
 
 ## Ablauf
 

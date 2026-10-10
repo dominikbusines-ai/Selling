@@ -1,5 +1,6 @@
 (async () => {
-  const result = await chrome.runtime.sendMessage({ type: 'read' });
+  const extensionApi = typeof browser !== 'undefined' ? browser : chrome;
+  const result = await extensionApi.runtime.sendMessage({ type: 'read' });
   if (!result?.ok) return;
   const draft = result.draft;
   const host = document.createElement('aside');
@@ -53,7 +54,7 @@
     finally { shadow.querySelector('#status').textContent = notes.join(' · '); button.disabled = false; }
   }
   shadow.querySelector('#fill').addEventListener('click', fill);
-  shadow.querySelector('#close').addEventListener('click', async () => { await chrome.runtime.sendMessage({ type: 'discard' }); host.remove(); });
+  shadow.querySelector('#close').addEventListener('click', async () => { await extensionApi.runtime.sendMessage({ type: 'discard' }); host.remove(); });
   // No clicks on site controls, submit calls, category guesses, or CAPTCHA interaction.
   await fill();
 })();
