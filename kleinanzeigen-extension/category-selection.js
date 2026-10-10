@@ -1,18 +1,26 @@
 // Restrict clicks to the category picker. Never click Weiter or submit an ad.
+function sellingCategoryHeadings() {
+  const text = (node) => node.textContent.replace(/\s+/g, ' ').trim().toLocaleLowerCase('de-DE');
+  return [...document.querySelectorAll('h1,h2,h3,h4,legend,[role="heading"],strong,p,div')].filter((node) =>
+    node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && text(node) === 'kategorie auswählen' &&
+    ![...node.children].some((child) => text(child) === 'kategorie auswählen'));
+}
+
 async function selectSellingCategory(path, isActive = () => true) {
   const norm = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('de-DE');
   const shown = (node) => node.getClientRects().length > 0 && getComputedStyle(node).visibility !== 'hidden' && !node.disabled && node.getAttribute('aria-disabled') !== 'true';
   function picker() {
-    const headings = [...document.querySelectorAll('h1,h2,h3,h4,legend')].filter((node) => shown(node) && norm(node.textContent) === 'kategorie auswählen');
+    const headings = sellingCategoryHeadings();
     if (headings.length !== 1) return null;
     let root = headings[0].parentElement;
     while (root && root !== document.body && root !== document.documentElement) {
-      if (/unterkategorie/i.test(root.textContent) && root.querySelector('a,button,[role="option"],[role="treeitem"],li')) return root;
+      // The first step has only the main categories; the child column does not exist yet.
+      if (root.querySelector('a,button,[role="option"],[role="treeitem"],[role="button"],li')) return root;
       root = root.parentElement;
     }
     return null;
   }
-  if (!picker()) return { picker: false, text: '' };
+  if (!picker()) return { picker: sellingCategoryHeadings().length > 0, text: 'Kategorieauswahl erkannt, Bedienelemente aber nicht eindeutig zugeordnet. Bitte manuell auswählen.' };
   if (!Array.isArray(path) || path.length !== 2) return { picker: true, text: 'Keine Kategorieempfehlung übergeben. Bitte Kategorie selbst auswählen.' };
   function candidates(name, minLeft = -Infinity) {
     const root = picker();

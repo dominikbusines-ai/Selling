@@ -1,4 +1,6 @@
-# Selling → Kleinanzeigen (PC, Version 0.4 – Live-Prüfung ausstehend)
+# Selling → Kleinanzeigen (PC, Version 0.4.1 – Live-Prüfung ausstehend)
+
+Version 0.4.1 erkennt auch den anfänglichen Auswahlschritt ohne bereits vorhandene Unterkategoriespalte. Auf der Kategorieseite werden keine irreführenden Fehler zu noch nicht vorhandenen Artikel-, Preis- und Uploadfeldern mehr angezeigt. Erweiterung neu laden und den Zieltab neu öffnen/aktualisieren. Website-Änderungen sind für diese Korrektur nicht nötig.
 
 ## Aktualisierung 0.4: Kategorie-Zwischenschritt
 

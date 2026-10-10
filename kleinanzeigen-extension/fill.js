@@ -13,6 +13,7 @@
   document.documentElement.append(host);
   const applied = new WeakSet();
   let categoryAttempted = false;
+  let categoryStatus = '';
   let formObserver;
   let formTimer;
   function watchForForm() {
@@ -70,13 +71,19 @@
     const notes = [];
     try {
       if (!categoryAttempted) {
-        categoryAttempted = true;
         const selection = await selectSellingCategory(draft.categoryPath, () => host.isConnected);
         if (selection.picker) {
+          categoryAttempted = true;
+          categoryStatus = selection.text;
           notes.push(selection.text);
           if (host.isConnected) watchForForm();
           return;
         }
+      }
+      if (sellingCategoryHeadings().length) {
+        notes.push(categoryStatus || 'Bitte zuerst die Kategorie auswählen und „Weiter“ klicken. Die Artikelfelder erscheinen erst danach.');
+        if (host.isConnected) watchForForm();
+        return;
       }
       notes.push(fillText(['titel', 'title', 'adtitle', 'ad-title'], draft.name, 'Titel'));
       notes.push(fillText(['beschreibung', 'description', 'addescription', 'ad-description'], draft.description, 'Beschreibung', true));
