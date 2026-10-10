@@ -1,10 +1,18 @@
-# Selling → Kleinanzeigen (PC, Version 0.3 – Live-Prüfung ausstehend)
+# Selling → Kleinanzeigen (PC, Version 0.4 – Live-Prüfung ausstehend)
+
+## Aktualisierung 0.4: Kategorie-Zwischenschritt
+
+Die Website übergibt jetzt auch den gespeicherten KI-Kategoriepfad. Fehlt die Empfehlung noch, wird kein neuer Tab geöffnet und ein Hinweis angezeigt. Bei einer als unklar eingestuften Kategorie bleibt die Auswahl manuell.
+
+Die Erweiterung sucht ausschließlich im Bereich „Kategorie auswählen“ nach exakten Haupt-/Unterkategorienamen. Sie klickt bei eindeutigen Treffern zunächst die Hauptkategorie und wartet auf die Unterkategorie. Mehrdeutige, unbekannte oder nur verkürzt verfügbare Namen werden nicht geraten. Anschließend die Markierung und eventuell erforderliche dritte Ebene selbst prüfen und auf „Weiter“ klicken. Die Erweiterung veröffentlicht niemals automatisch. Im selben Dokument wartet sie bis zu einer Minute auf das Anzeigenformular; danach bei Bedarf „Daten eintragen / ergänzen“ verwenden.
+
+Website veröffentlichen, in Firefox unter `about:debugging` die Erweiterung neu laden, Verkaufswebsite neu laden und einen **neuen** Entwurf starten. Alte offene Entwürfe enthalten den Kategoriepfad noch nicht. Die Erweiterung muss Version 0.4 anzeigen. Die Auswahl wurde mit einer nachgebildeten zweispaltigen Oberfläche getestet, nicht im echten angemeldeten Kleinanzeigen-Konto.
 
 ## Aktualisierung 0.3
 
 Nach Dateiänderungen das temporäre Add-on in `about:debugging` neu laden und den Kleinanzeigen-Tab ebenfalls neu laden. Preisfelder erhalten ganze Eurobeträge ohne Dezimalstellen; Text-/Telefonfelder verwenden für Centbeträge ein Komma, native Zahlenfelder einen Punkt. Bitte den Endpreis kontrollieren. „Nur Abholung“ wird einmalig über eine eindeutig beschriftete Radio- oder Auswahloption ausgewählt; wenn das Feld nicht erkannt wird, erscheint ein Hinweis statt einer geratenen Auswahl. Spätere manuelle Änderungen bleiben erhalten.
 
-Die Website schlägt auf Detailkarten eine KI-Kategorie vor. Grundlage sind die 147 Unterkategorien der öffentlichen Übersicht https://www.kleinanzeigen.de/s-kategorien.html, Stand 10.10.2026, gespeichert in `kleinanzeigen-categories.json`. Weitere kategoriespezifische Formularmerkmale sind nicht Bestandteil dieser Liste. Die Kategorie wird nicht automatisch im Fremdformular ausgewählt.
+Die Website schlägt auf Detailkarten eine KI-Kategorie vor. Grundlage sind die 147 Unterkategorien der öffentlichen Übersicht https://www.kleinanzeigen.de/s-kategorien.html, Stand 10.10.2026, gespeichert in `kleinanzeigen-categories.json`. Weitere kategoriespezifische Formularmerkmale sind nicht Bestandteil dieser Liste. Ab Version 0.4 wird die zweistufige Kategorieauswahl unterstützt (siehe oben).
 
 Beim Laden der Verkaufsliste werden angemeldeten Nutzern Empfehlungen für unverkaufte Artikel in Gruppen von acht erstellt (nur Namen/Beschreibungsauszüge, keine Bilder). Ergebnisse werden benutzerspezifisch auf dem Gerät zwischengespeichert. Änderungen am Text oder der Kategorienliste lösen eine neue Prüfung aus. Das erzeugt beim ersten Öffnen KI-Kosten; erneutes Öffnen unveränderter Einträge verwendet die gespeicherten Ergebnisse. Keine Supabase-Datenänderung oder Migration.
 

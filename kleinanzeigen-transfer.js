@@ -10,6 +10,11 @@ async function prepareKleinanzeigenDraft(item, button) {
   button.disabled = true;
   button.textContent = 'Entwurf vorbereiten …';
   try {
+    refreshCategoryOwner();
+    if (!listingCategoryCache[listingCategoryKey(item)]) await scheduleListingCategories();
+    const recommendation = listingCategoryCache[listingCategoryKey(item)];
+    if (!recommendation) throw new Error('Die KI-Kategorie ist noch nicht verfügbar. Bitte die Empfehlung am Artikel abwarten und dann erneut inserieren.');
+    const categoryPath = recommendation.category ? recommendation.category.split(' > ') : [];
     let image = null;
     if (item.image) {
       let source = item.image;
@@ -40,7 +45,7 @@ async function prepareKleinanzeigenDraft(item, button) {
       };
       const timer = setTimeout(() => { cleanup(); reject(new Error('Keine Bestätigung der Erweiterung. Bitte geöffnete Kleinanzeigen-Tabs prüfen, bevor Sie erneut übertragen.')); }, 15000);
       window.addEventListener('message', receive);
-      window.postMessage({ type: 'SELLING_PREPARE_DRAFT', requestId, draft: { name: item.name, description: item.description || '', price: Number(item.price), image } }, location.origin);
+      window.postMessage({ type: 'SELLING_PREPARE_DRAFT', requestId, draft: { name: item.name, description: item.description || '', price: Number(item.price), image, categoryPath } }, location.origin);
     });
   } catch (error) { alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
   finally { button.disabled = false; button.textContent = previous; }

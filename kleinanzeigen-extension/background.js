@@ -5,6 +5,7 @@ function validDraft(draft) {
   return draft && typeof draft.name === 'string' && draft.name.trim() && draft.name.length <= 120 &&
     typeof draft.description === 'string' && draft.description.length <= 15000 &&
     Number.isFinite(draft.price) && draft.price >= 0 &&
+    (draft.categoryPath === undefined || (Array.isArray(draft.categoryPath) && [0, 2].includes(draft.categoryPath.length) && draft.categoryPath.every((part) => typeof part === 'string' && part.trim() && part.length <= 120))) &&
     (draft.image === null || (typeof draft.image === 'string' && draft.image.length <= 7_000_000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(draft.image)));
 }
 extensionApi.runtime.onMessage.addListener((message, sender, respond) => {

@@ -7,8 +7,26 @@
   const shadow = host.attachShadow({ mode: 'closed' });
   shadow.innerHTML = `<style>:host{position:fixed;bottom:16px;right:16px;z-index:2147483647;width:min(360px,calc(100vw - 32px));font:14px/1.5 system-ui;color:#172b24}section{background:white;border:2px solid #214d40;border-radius:12px;padding:16px;box-shadow:0 4px 24px #0003;max-height:65vh;overflow:auto}button{padding:10px;margin:8px 6px 0 0;cursor:pointer}p{margin:8px 0}</style><section><strong>Selling: Entwurf vorbereiten</strong><p id="name"></p><p>Formular bitte öffnen und ggf. anmelden bzw. Kategorie wählen. Die automatische Zuordnung ist noch nicht am Live-Formular bestätigt.</p><p id="status" role="status"></p><button id="fill">Daten eintragen / ergänzen</button><button id="close">Übergabe beenden</button><p>Es wird nichts veröffentlicht. Bitte Preisart, Kategorie, Versand, Standort und alle Angaben selbst prüfen.</p></section>`;
   shadow.querySelector('#name').textContent = draft.name;
+  const categoryInfo = document.createElement('p');
+  categoryInfo.textContent = draft.categoryPath?.length ? `KI-Empfehlung: ${draft.categoryPath.join(' > ')}` : 'Keine KI-Kategorie übergeben.';
+  shadow.querySelector('#name').after(categoryInfo);
   document.documentElement.append(host);
   const applied = new WeakSet();
+  let categoryAttempted = false;
+  let formObserver;
+  let formTimer;
+  function watchForForm() {
+    formObserver?.disconnect();
+    clearTimeout(formTimer);
+    formObserver = new MutationObserver(() => {
+      if (!fieldsFor(['titel', 'title', 'adtitle', 'ad-title']).length) return;
+      formObserver.disconnect();
+      clearTimeout(formTimer);
+      if (!shadow.querySelector('#fill').disabled) fill();
+    });
+    formObserver.observe(document.body, { childList: true, subtree: true });
+    formTimer = setTimeout(() => formObserver.disconnect(), 60000);
+  }
   const normalize = (text) => String(text || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[\s:*]+$/g, '');
   const visible = (element) => !element.disabled && !element.readOnly && element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden';
   function fieldsFor(names, textarea = false) {
@@ -51,6 +69,15 @@
     button.disabled = true;
     const notes = [];
     try {
+      if (!categoryAttempted) {
+        categoryAttempted = true;
+        const selection = await selectSellingCategory(draft.categoryPath, () => host.isConnected);
+        if (selection.picker) {
+          notes.push(selection.text);
+          if (host.isConnected) watchForForm();
+          return;
+        }
+      }
       notes.push(fillText(['titel', 'title', 'adtitle', 'ad-title'], draft.name, 'Titel'));
       notes.push(fillText(['beschreibung', 'description', 'addescription', 'ad-description'], draft.description, 'Beschreibung', true));
       notes.push(fillText(['preis', 'preis in €', 'price', 'adprice', 'ad-price', 'priceamount', 'price.amount'], String(draft.price), 'Preis'));
@@ -73,7 +100,7 @@
     finally { shadow.querySelector('#status').textContent = notes.join(' · '); button.disabled = false; }
   }
   shadow.querySelector('#fill').addEventListener('click', fill);
-  shadow.querySelector('#close').addEventListener('click', async () => { await extensionApi.runtime.sendMessage({ type: 'discard' }); host.remove(); });
-  // Only the explicit pickup option may be clicked; never submit or interact with CAPTCHA.
+  shadow.querySelector('#close').addEventListener('click', async () => { formObserver?.disconnect(); clearTimeout(formTimer); await extensionApi.runtime.sendMessage({ type: 'discard' }); host.remove(); });
+  // Only explicit category/pickup options may be clicked; never publish or handle CAPTCHA.
   await fill();
 })();
