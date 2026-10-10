@@ -371,6 +371,11 @@ function openForm(item = null) {
   elements.deleteItem.hidden = !item;
   elements.formAi.hidden = !item || valuables;
   document.querySelector('#prepare-listing-from-form').hidden = !item || valuables || Boolean(item.sold);
+  document.querySelector('#form-listing-category-wrap').hidden = !item || valuables || Boolean(item.sold);
+  document.querySelector('#form-listing-category').dataset.itemId = item?.id || '';
+  document.querySelector('#form-listing-category').textContent = '';
+  refreshCategoryOwner();
+  updateCategoryLabels();
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   if (!window.matchMedia?.('(pointer: coarse)').matches) requestAnimationFrame(() => elements.name.focus());
 }
@@ -821,6 +826,7 @@ document.querySelector('#prepare-listing-from-form').addEventListener('click', (
   const item = state.items.find((entry) => entry.id === state.editingItemId);
   if (item) prepareKleinanzeigenDraft(item, event.currentTarget);
 });
+document.querySelector('#form-listing-category').addEventListener('click', () => scheduleListingCategories(true));
 elements.deleteItem.addEventListener('click', () => {
   if (!state.busy && elements.id.value) deleteItem(elements.id.value);
 });

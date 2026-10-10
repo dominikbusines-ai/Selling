@@ -159,6 +159,11 @@ textarea { resize: vertical; }
 .image-upload strong { margin-bottom: 3px; font-size: 13px; }
 .image-upload-row { display: grid; gap: 7px; }
 .form-ai-button { width: 100%; margin-top: 2px; }
+.form-listing-category-wrap { padding: 12px 14px; border: 1px solid var(--line); border-radius: 7px; background: #f3f7f3; }
+.form-listing-category-wrap[hidden] { display: none; }
+.form-listing-category-wrap strong { display: block; font-size: 12px; }
+.form-listing-category-wrap .form-listing-category { display: block; width: 100%; height: auto; min-height: 44px; margin: 4px 0; overflow: visible; -webkit-line-clamp: unset; color: var(--green); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.form-listing-category-wrap small { display: block; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .remove-image-button { position: relative; z-index: 2; justify-self: stretch; min-height: 44px; padding: 10px 13px; border: 1px solid #e4b9ae; border-radius: 7px; color: #963f34; background: #fff5f2; font-size: 13px; font-weight: 600; text-align: center; touch-action: manipulation; }
 .remove-image-button:hover { border-color: #c87564; background: #ffebe6; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 27px; }
