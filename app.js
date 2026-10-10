@@ -275,6 +275,9 @@ function render() {
       if (image.complete && image.naturalWidth > 0) image.classList.remove('is-loading');
     } else { image.hidden = true; }
     card.querySelector('.ai-button').addEventListener('click', () => openAi(item));
+    const listingButton = card.querySelector('.listing-button');
+    listingButton.hidden = Boolean(item.sold || itemSection(item) !== 'selling');
+    listingButton.addEventListener('click', () => prepareKleinanzeigenDraft(item, listingButton));
     itemCard.classList.toggle('is-compact', state.compactView);
     itemCard.tabIndex = 0;
     itemCard.setAttribute('role', 'button');
@@ -362,6 +365,7 @@ function openForm(item = null) {
   elements.formTitle.textContent = valuables ? (item ? 'Wertgegenstand bearbeiten' : 'Wertgegenstand hinzufügen') : (item ? 'Gegenstand bearbeiten' : 'Gegenstand hinzufügen');
   elements.deleteItem.hidden = !item;
   elements.formAi.hidden = !item || valuables;
+  document.querySelector('#prepare-listing-from-form').hidden = !item || valuables || Boolean(item.sold);
   setPreview(state.imageData); elements.backdrop.hidden = false; lockPageScroll();
   if (!window.matchMedia?.('(pointer: coarse)').matches) requestAnimationFrame(() => elements.name.focus());
 }
@@ -807,6 +811,10 @@ elements.formAi.addEventListener('click', () => {
     image: state.imageData,
     imagePath: state.imagePath
   });
+});
+document.querySelector('#prepare-listing-from-form').addEventListener('click', (event) => {
+  const item = state.items.find((entry) => entry.id === state.editingItemId);
+  if (item) prepareKleinanzeigenDraft(item, event.currentTarget);
 });
 elements.deleteItem.addEventListener('click', () => {
   if (!state.busy && elements.id.value) deleteItem(elements.id.value);

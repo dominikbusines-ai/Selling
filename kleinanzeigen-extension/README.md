@@ -1,0 +1,32 @@
+# Selling → Kleinanzeigen (PC, Version 0.1 – Live-Prüfung ausstehend)
+
+## Schutz bestehender Daten
+
+Diese Erweiterung liest einen ausdrücklich freigegebenen Artikel. Sie hat keinen Supabase-Schlüssel, führt keine Datenbankänderungen aus, löscht keine Artikel und veröffentlicht keine Anzeigen. Sie greift weder auf Passwörter noch auf Cookies zu. Ein vorhandener Text im Zielformular wird nicht überschrieben. Die Felder werden ausschließlich anhand eindeutiger Beschriftungen zugeordnet; unbekannte Felder bleiben unangetastet.
+
+## Installation in Chrome oder Edge
+
+1. Die Website-Änderungen wie gewohnt über GitHub/Vercel veröffentlichen.
+2. In Chrome `chrome://extensions`, in Edge `edge://extensions` öffnen.
+3. Entwicklermodus einschalten, „Entpackte Erweiterung laden“ wählen.
+4. Diesen Ordner `kleinanzeigen-extension` auswählen (nicht den gesamten Selling-Ordner).
+5. `https://selling-tau.vercel.app` neu laden. In der Website erscheint „Inserieren“ bei unverkauften Verkaufsartikeln; auch im Bearbeitungsfenster verfügbar.
+
+Die Erweiterung ist nur für diese konkrete Selling-Adresse freigegeben. Bei einer anderen Domain müssen `manifest.json`, `bridge.js` und `background.js` ausdrücklich angepasst werden. Kein iPhone-Support für diese Chrome-/Edge-Erweiterung.
+
+## Ablauf
+
+1. Änderungen am Artikel zuerst speichern. Übertragen wird der gespeicherte Artikel, nicht eine ungespeicherte Bearbeitung.
+2. „Inserieren“ anklicken und die Übertragung bestätigen. Titel, Beschreibung, Preis und gegebenenfalls das Originalbild werden übergeben.
+3. Kleinanzeigen öffnet sich in einem neuen Tab. Falls nötig, anmelden und anschließend im selben Tab „Anzeige aufgeben“ öffnen.
+4. Die Erweiterung versucht die bekannten leeren Felder zu befüllen. Nach der Kategorieauswahl gegebenenfalls „Daten eintragen / ergänzen“ drücken.
+5. Unbedingt Titel, Beschreibung, Bild-Upload, Preis einschließlich Dezimalstellen, Festpreis/VB, Kategorie, Versand und Standort kontrollieren. Fehlende/mehrdeutige Felder manuell ergänzen.
+6. Nur Sie selbst klicken auf die Veröffentlichung. Danach „Übergabe beenden“ oder den Tab schließen.
+
+Entwurfsdaten liegen nur im Sitzungsspeicher der Erweiterung (nicht synchronisiert), werden nach 30 Minuten nicht mehr ausgegeben und beim Schließen des Ziel-Tabs bzw. Beenden des Browsers entfernt. Es werden keine Daten an weitere Anbieter übertragen. Pro Artikel derzeit ein JPG-, PNG- oder WebP-Bild bis 5 MB. HEIC wird nicht stillschweigend ausgelassen, sondern als Fehler gemeldet.
+
+## Wichtige Grenzen
+
+Der öffentliche Abruf des Einstellformulars lieferte während der Entwicklung HTTP 403. Es wurden keine Zugriffssperren umgangen. Die Feldzuordnung ist daher ein lokal getesteter Prototyp, keine bestätigte Live-Integration. Kategorieablauf, Anmeldung und Upload im echten Konto müssen vor produktiver Nutzung manuell geprüft werden. Bei Layoutänderungen oder nicht erkannten Feldern stoppt die Zuordnung für diese Felder. Captchas und andere Schutzmechanismen werden nicht bedient oder umgangen.
+
+Die Nutzungsbedingungen enthalten Einschränkungen für automatisierte Zugriffe. Eine Freigabe dieses Ablaufs durch Kleinanzeigen ist nicht bestätigt; vor produktiver Verwendung die Zulässigkeit mit Kleinanzeigen klären. Keine Verbindung zur Veröffentlichungsschnittstelle und keine Zusage, dass Kleinanzeigen die Befüllung akzeptiert.
