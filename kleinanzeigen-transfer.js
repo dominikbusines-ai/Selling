@@ -104,11 +104,12 @@ async function prepareKleinanzeigenDraft(item, button, options = {}) {
       if (blob.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(blob.type.split(';')[0])) {
         throw new Error('Für die Übergabe bitte ein JPG-, PNG- oder WebP-Bild bis 5 MB verwenden. Ihr vorhandenes Bild wurde nicht verändert.');
       }
+      const transferBlob = await compactListingImage(blob);
       image = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(new Error('Bild konnte nicht gelesen werden.'));
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(transferBlob);
       });
     }
     const requestId = crypto.randomUUID();
@@ -135,6 +136,34 @@ async function prepareKleinanzeigenDraft(item, button, options = {}) {
     }
   } catch (error) { if (options.batch) throw error; alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
   finally { button.disabled = false; button.textContent = previous; }
+}
+
+// Keep several drafts within the extension's session quota; originals stay untouched.
+async function compactListingImage(blob) {
+  const limit = 450 * 1024;
+  if (blob.size <= limit) return blob;
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Bildaufbereitung dauert zu lange. Bitte erneut versuchen.')), 15000);
+      image.onload = () => { clearTimeout(timer); resolve(); };
+      image.onerror = () => { clearTimeout(timer); reject(new Error('Bild konnte nicht für Kleinanzeigen aufbereitet werden.')); };
+      image.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    for (const edge of [1800, 1400, 1000, 700]) {
+      const scale = Math.min(1, edge / Math.max(image.naturalWidth, image.naturalHeight));
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const result = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .82));
+      if (result && result.size <= limit) return result;
+    }
+    throw new Error('Das Bild konnte nicht ausreichend verkleinert werden. Es wurde kein Entwurf geöffnet.');
+  } finally { URL.revokeObjectURL(url); }
 }
 
 async function markListingTransferred(itemId, ownerId) {

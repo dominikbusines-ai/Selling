@@ -1,6 +1,13 @@
 const SOURCE = 'https://selling-tau.vercel.app';
 const extensionApi = typeof browser !== 'undefined' ? browser : chrome;
 const TARGET = 'https://www.kleinanzeigen.de/p-anzeige-aufgeben.html';
+async function pruneDrafts() {
+  const entries = await extensionApi.storage.session.get(null);
+  const tabs = new Set((await extensionApi.tabs.query({})).map((tab) => tab.id));
+  const stale = Object.entries(entries).filter(([key, entry]) => key.startsWith('draft:') &&
+    (!entry || entry.expires <= Date.now() || !tabs.has(Number(key.slice(6))))).map(([key]) => key);
+  if (stale.length) await extensionApi.storage.session.remove(stale);
+}
 function validDraft(draft) {
   return draft && typeof draft.name === 'string' && draft.name.trim() && draft.name.length <= 120 &&
     typeof draft.description === 'string' && draft.description.length <= 15000 &&
@@ -13,13 +20,22 @@ extensionApi.runtime.onMessage.addListener((message, sender, respond) => {
     const url = new URL(sender.url || 'https://invalid.invalid');
     if (message.type === 'prepare' && url.origin === SOURCE && sender.frameId === 0) {
       if (!validDraft(message.draft)) throw new Error('Ungültige oder zu große Artikeldaten.');
+      await pruneDrafts();
       // Store before navigation so the destination can never race ahead of its draft.
       const tab = await extensionApi.tabs.create({ url: 'about:blank', active: true });
       const key = `draft:${tab.id}`;
       try {
         await extensionApi.storage.session.set({ [key]: { draft: message.draft, expires: Date.now() + 30 * 60 * 1000 } });
         await extensionApi.tabs.update(tab.id, { url: TARGET });
-      } catch (error) { await extensionApi.storage.session.remove(key); throw error; }
+      } catch (error) {
+        await extensionApi.storage.session.remove(key).catch(() => {});
+        // Remove only the empty tab created by this failed handoff.
+        await extensionApi.tabs.remove(tab.id).catch(() => {});
+        if (/quota/i.test(`${error.name} ${error.message}`)) {
+          throw new Error('Der Entwurfsspeicher ist voll. Bitte abgeschlossene Entwurfs-Tabs schließen oder dort „Übergabe beenden“ wählen. Bestehende Entwürfe bleiben unverändert.');
+        }
+        throw error;
+      }
       return { ok: true };
     }
     if (message.type === 'read' && url.origin === 'https://www.kleinanzeigen.de' && url.pathname.startsWith('/p-anzeige-aufgeben') && sender.frameId === 0) {

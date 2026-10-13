@@ -58,6 +58,8 @@ Entwurfsdaten liegen nur im Sitzungsspeicher der Erweiterung (nicht synchronisie
 
 ## Wichtige Grenzen
 
+Version 0.4.3: Große Bilder werden auf der Selling-Website ausschließlich für die Übergabe auf maximal 450 KiB verkleinert (JPEG-Kopie, zunächst bis 1800 Pixel). Gespeicherte Originale bleiben unverändert. Hierfür die Website ebenfalls aktualisieren. Das Add-on entfernt vor neuen Übergaben abgelaufene Daten und Daten geschlossener Tabs. Bei Speicherfehlern wird nur der gerade neu erzeugte leere Tab entfernt, nie ein bestehender Entwurfs-Tab.
+
 ### Mehrere Entwürfe
 
 In Selling über „Mehrere inserieren“ bis zu fünf noch nicht inserierte, unverkaufte Artikel auswählen. „Entwürfe vorbereiten“ übergibt sie nacheinander in eigene Tabs. Der Zähler zählt bestätigte Übergaben an die Erweiterung, nicht abgeschlossene Uploads oder Veröffentlichungen. Bei Fehlern stoppt der Durchlauf; vor einem erneuten Versuch vorhandene Tabs prüfen, besonders nach Zeitüberschreitungen. Die geöffneten Formulare sind nicht zwingend dauerhaft gespeicherte Kleinanzeigen-Entwürfe. Alle Angaben prüfen und Tabs bis dahin geöffnet lassen. Die Auswahl funktioniert auch in der Kompaktansicht; ausgeblendete Suchtreffer bleiben ausgewählt und zählen zum Limit.
