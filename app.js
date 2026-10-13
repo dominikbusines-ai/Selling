@@ -235,6 +235,7 @@ function render() {
   elements.soldValue.textContent = money.format(soldTotal);
   elements.soldCount.textContent = `${soldItems.length} verkauft · Details öffnen`;
 
+  updateBatchListingControls();
   matches.forEach((item, index) => {
     const card = document.querySelector('#item-template').content.cloneNode(true);
     const image = card.querySelector('.item-image');
@@ -245,6 +246,7 @@ function render() {
     card.querySelector('.compact-price').textContent = money.format(displayPrice);
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
     const itemCard = card.querySelector('.item-card');
+    addBatchListingControl(itemCard, item);
     itemCard.classList.toggle('is-sold', Boolean(item.sold));
     itemCard.classList.toggle('is-ready', Boolean(item.readyForSale && !item.listed && !item.sold));
     itemCard.classList.toggle('is-listed', Boolean(item.listed && !item.sold));
@@ -288,7 +290,7 @@ function render() {
     itemCard.setAttribute('role', 'button');
     itemCard.setAttribute('aria-label', `${item.name} bearbeiten`);
     itemCard.addEventListener('click', (event) => {
-      if (event.target.closest('button, a')) return;
+      if (event.target.closest('button, a, input, label')) return;
       if (!state.compactView && event.target.closest('.item-image-wrap') && item.image) openImagePreview(item);
       else openForm(item);
     });

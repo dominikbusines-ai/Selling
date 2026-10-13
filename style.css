@@ -103,6 +103,11 @@ h2 { margin-bottom: 0; font-size: 28px; letter-spacing: -.04em; }
 .item-card.is-compact .no-image { z-index: 2; }
 .item-card.is-compact .compact-price { position: absolute; right: 12px; bottom: 11px; left: 12px; z-index: 3; display: block; color: var(--white); font-size: 17px; letter-spacing: -.03em; text-align: right; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
 .item-card.is-compact .item-card-body { display: none; }
+.batch-listing-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--muted); }
+.batch-listing-bar[hidden] { display: none; }
+.item-card { position: relative; }
+.batch-item-select { position: absolute; top: 8px; left: 8px; z-index: 6; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; background: var(--white); box-shadow: 0 2px 8px #0002; cursor: pointer; }
+.batch-item-select input { width: 20px; height: 20px; accent-color: var(--green); }
 .item-card.is-listed { border-color: #2f8a5c; box-shadow: 0 0 0 1px #2f8a5c; }
 .item-card.is-sold { filter: grayscale(1); opacity: .65; }
 .item-card.is-sold .item-image-wrap::before { display: none; }

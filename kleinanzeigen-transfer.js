@@ -1,11 +1,89 @@
+const batchListing = { active: false, busy: false, ids: new Set(), owner: null };
+
+function updateBatchListingControls() {
+  const owner = state.session?.user.id || null;
+  if (batchListing.owner !== owner) { batchListing.ids.clear(); batchListing.owner = owner; }
+  for (const id of batchListing.ids) {
+    if (!state.items.some((item) => item.id === id && !item.sold && !item.listed && itemSection(item) === 'selling')) batchListing.ids.delete(id);
+  }
+  document.querySelector('#batch-listing-bar').hidden = state.section !== 'selling';
+  const toggle = document.querySelector('#batch-toggle');
+  toggle.textContent = batchListing.active ? 'Auswahl beenden' : 'Mehrere inserieren';
+  toggle.setAttribute('aria-pressed', String(batchListing.active));
+  toggle.disabled = batchListing.busy;
+  const start = document.querySelector('#batch-start');
+  start.hidden = !batchListing.active;
+  start.disabled = batchListing.busy || !batchListing.ids.size;
+  start.textContent = `${batchListing.ids.size}/5 Entwürfe vorbereiten`;
+  document.querySelectorAll('.batch-item-select input').forEach((input) => {
+    input.disabled = batchListing.busy || (!input.checked && batchListing.ids.size >= 5);
+  });
+}
+
+function addBatchListingControl(card, item) {
+  if (!batchListing.active || item.sold || item.listed || itemSection(item) !== 'selling') return;
+  const label = document.createElement('label');
+  label.className = 'batch-item-select';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('aria-label', `${item.name} für Entwurf auswählen`);
+  input.checked = batchListing.ids.has(item.id);
+  input.disabled = batchListing.busy || (!input.checked && batchListing.ids.size >= 5);
+  input.addEventListener('change', () => {
+    if (input.checked && batchListing.ids.size < 5) batchListing.ids.add(item.id);
+    else { batchListing.ids.delete(item.id); input.checked = false; }
+    updateBatchListingControls();
+  });
+  label.append(input); card.prepend(label);
+}
+
+document.querySelector('#batch-toggle').addEventListener('click', () => {
+  if (document.documentElement.dataset.sellingBridge !== '1') {
+    alert('Die Mehrfachübergabe benötigt die Selling-Erweiterung im PC-Browser. Auf dem Handy bitte einzeln über „Inserieren“ kopieren.'); return;
+  }
+  batchListing.active = !batchListing.active;
+  batchListing.ids.clear();
+  document.querySelector('#batch-status').textContent = '';
+  render();
+});
+document.querySelector('#batch-start').addEventListener('click', async () => {
+  if (batchListing.busy || document.documentElement.dataset.sellingBridge !== '1') return;
+  updateBatchListingControls();
+  const ids = [...batchListing.ids].slice(0, 5);
+  if (!ids.length || !confirm(`${ids.length} Entwürfe in eigenen Kleinanzeigen-Tabs vorbereiten?\nBestätigte Übergaben werden als „Inseriert“ markiert. Nichts wird veröffentlicht. Tabs offen lassen und Bild, Kategorie sowie alle Angaben prüfen; Formulare sind nicht zwingend dauerhaft gespeichert.`)) return;
+  const owner = state.session?.user.id || null;
+  const status = document.querySelector('#batch-status');
+  batchListing.busy = true;
+  updateBatchListingControls();
+  let completed = 0;
+  try {
+    for (const id of ids) {
+      if ((state.session?.user.id || null) !== owner) throw new Error('Konto gewechselt.');
+      const item = state.items.find((item) => item.id === id);
+      if (!item || item.sold || item.listed || itemSection(item) !== 'selling') throw new Error('Ein ausgewählter Artikel wurde zwischenzeitlich geändert.');
+      status.textContent = `${completed}/${ids.length} übergeben · ${item.name}`;
+      // Separate button state avoids interfering with the persistent batch controls.
+      const saved = await prepareKleinanzeigenDraft(item, document.createElement('button'), { batch: true });
+      if (saved === undefined) throw new Error('Übergabe nicht bestätigt.');
+      batchListing.ids.delete(id);
+      completed++;
+      if (!saved) throw new Error('Entwurf übergeben, aber Status nicht gespeichert. Bitte „Inseriert“ manuell setzen.');
+    }
+    status.textContent = `${completed}/${ids.length} Entwürfe übergeben. In den geöffneten Tabs prüfen.`;
+  } catch (error) {
+    status.textContent = `${completed}/${ids.length} bestätigt. Gestoppt: ${error.message} Geöffnete Tabs vor einem neuen Versuch prüfen.`;
+  } finally { batchListing.busy = false; render(); }
+});
+
 // Exports a draft; only the listed flag is saved after a confirmed handoff.
-async function prepareKleinanzeigenDraft(item, button) {
+async function prepareKleinanzeigenDraft(item, button, options = {}) {
+  if (batchListing.busy && !options.batch) return;
   if (!item || item.sold || itemSection(item) !== 'selling') return;
   if (document.documentElement.dataset.sellingBridge !== '1') {
     openManualListing(item, button);
     return;
   }
-  if (!confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Nach bestätigter Übergabe wird der Artikel hier als „Inseriert“ markiert. Bitte danach Kategorie, Versand und alle Angaben prüfen. Die Veröffentlichung bei Kleinanzeigen bestätigen Sie selbst.`)) return;
+  if (!options.batch && !confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Nach bestätigter Übergabe wird der Artikel hier als „Inseriert“ markiert. Bitte danach Kategorie, Versand und alle Angaben prüfen. Die Veröffentlichung bei Kleinanzeigen bestätigen Sie selbst.`)) return;
   const ownerId = state.session?.user.id || null;
   const previous = button.textContent;
   button.disabled = true;
@@ -50,10 +128,12 @@ async function prepareKleinanzeigenDraft(item, button) {
     });
     try {
       await markListingTransferred(item.id, ownerId);
+      return true;
     } catch (error) {
-      alert(`Der Entwurf wurde übergeben, aber „Inseriert“ konnte nicht gespeichert werden. Bitte den Status manuell setzen; nicht erneut übertragen.\n\n${error.message || 'Speichern fehlgeschlagen.'}`);
+      if (!options.batch) alert(`Der Entwurf wurde übergeben, aber „Inseriert“ konnte nicht gespeichert werden. Bitte den Status manuell setzen; nicht erneut übertragen.\n\n${error.message || 'Speichern fehlgeschlagen.'}`);
+      return false;
     }
-  } catch (error) { alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
+  } catch (error) { if (options.batch) throw error; alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
   finally { button.disabled = false; button.textContent = previous; }
 }
 
