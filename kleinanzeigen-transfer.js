@@ -1,11 +1,12 @@
-// Read-only export. No Supabase writes, item deletion, or publication takes place here.
+// Exports a draft; only the listed flag is saved after a confirmed handoff.
 async function prepareKleinanzeigenDraft(item, button) {
   if (!item || item.sold || itemSection(item) !== 'selling') return;
   if (document.documentElement.dataset.sellingBridge !== '1') {
     openManualListing(item, button);
     return;
   }
-  if (!confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Bitte danach Kategorie, Versand und alle Angaben prüfen. Es wird nichts automatisch veröffentlicht und Ihr Eintrag bleibt unverändert.`)) return;
+  if (!confirm(`Entwurf für „${item.name}“ an Kleinanzeigen übergeben?\n\nÜbertragen werden Name, Beschreibung, Preis und das vorhandene Bild. Nach bestätigter Übergabe wird der Artikel hier als „Inseriert“ markiert. Bitte danach Kategorie, Versand und alle Angaben prüfen. Die Veröffentlichung bei Kleinanzeigen bestätigen Sie selbst.`)) return;
+  const ownerId = state.session?.user.id || null;
   const previous = button.textContent;
   button.disabled = true;
   button.textContent = 'Entwurf vorbereiten …';
@@ -16,7 +17,7 @@ async function prepareKleinanzeigenDraft(item, button) {
     if (!recommendation) throw new Error('Die KI-Kategorie ist noch nicht verfügbar. Bitte die Empfehlung am Artikel abwarten und dann erneut inserieren.');
     const categoryPath = recommendation.category ? recommendation.category.split(' > ') : [];
     let image = null;
-    if (item.image) {
+    if (item.image || item.imagePath) {
       let source = item.image;
       if (item.imagePath && supabaseClient) source = await signedImageUrl(item.imagePath);
       const response = await fetch(source, { signal: AbortSignal.timeout(20000) });
@@ -47,8 +48,35 @@ async function prepareKleinanzeigenDraft(item, button) {
       window.addEventListener('message', receive);
       window.postMessage({ type: 'SELLING_PREPARE_DRAFT', requestId, draft: { name: item.name, description: item.description || '', price: Number(item.price), image, categoryPath } }, location.origin);
     });
+    try {
+      await markListingTransferred(item.id, ownerId);
+    } catch (error) {
+      alert(`Der Entwurf wurde übergeben, aber „Inseriert“ konnte nicht gespeichert werden. Bitte den Status manuell setzen; nicht erneut übertragen.\n\n${error.message || 'Speichern fehlgeschlagen.'}`);
+    }
   } catch (error) { alert(error.message || 'Übergabe nicht möglich. Ihr Artikel bleibt unverändert.'); }
   finally { button.disabled = false; button.textContent = previous; }
+}
+
+async function markListingTransferred(itemId, ownerId) {
+  if ((state.session?.user.id || null) !== ownerId) throw new Error('Das angemeldete Konto hat sich geändert.');
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item || item.sold || itemSection(item) !== 'selling' || item.listed) return;
+  if (ownerId) {
+    // Update only this flag, never stale descriptions, photos, prices or sold status.
+    const { data, error } = await supabaseClient.from('selling_items')
+      .update({ listed: true, updated_at: new Date().toISOString() })
+      .eq('id', itemId).eq('user_id', ownerId).eq('sold', false)
+      .select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Der Artikel wurde nicht aktualisiert. Bitte den aktuellen Status prüfen.');
+    if ((state.session?.user.id || null) !== ownerId) return;
+  }
+  const nextItems = state.items.map((entry) => entry.id === itemId ? { ...entry, listed: true } : entry);
+  // Persist before updating the UI; a storage failure must not appear successful.
+  if (!ownerId) localStorage.setItem(STORAGE_KEY, JSON.stringify(nextItems));
+  state.items = nextItems;
+  if (state.editingItemId === itemId) document.querySelector('#item-listed').checked = true;
+  render();
 }
 
 // Clipboard-only fallback: never changes an item or sends it to another service.

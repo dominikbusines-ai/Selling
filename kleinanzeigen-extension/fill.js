@@ -16,6 +16,56 @@
   let categoryStatus = '';
   let formObserver;
   let formTimer;
+  const transferAbort = new AbortController();
+  let imageTransferred = false;
+  function imageField() {
+    const fields = [...document.querySelectorAll('input[type="file"]')].filter((field) =>
+      !field.disabled && (!field.accept || /image|\.jpe?g|\.png|\.webp/i.test(field.accept)));
+    // Hidden upload inputs are common. Never guess when multiple inputs qualify.
+    return fields.length === 1 ? fields[0] : null;
+  }
+  function waitForImageField() {
+    if (transferAbort.signal.aborted) return Promise.resolve(null);
+    const field = imageField();
+    if (field) return Promise.resolve(field);
+    return new Promise((resolve) => {
+      const finish = (field) => {
+        observer.disconnect(); clearTimeout(timer);
+        transferAbort.signal.removeEventListener('abort', cancel);
+        resolve(field);
+      };
+      const cancel = () => finish(null);
+      const observer = new MutationObserver(() => {
+        const field = imageField();
+        if (field) finish(field);
+      });
+      const timer = setTimeout(cancel, 20000);
+      transferAbort.signal.addEventListener('abort', cancel, { once: true });
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'accept', 'type'] });
+    });
+  }
+  async function fillImage() {
+    if (!draft.image) return 'Kein Bild im Artikel hinterlegt';
+    if (imageTransferred) return 'Bild: bereits übergeben – Upload bitte kontrollieren';
+    shadow.querySelector('#status').textContent = 'Warte auf das Bild-Uploadfeld …';
+    const field = await waitForImageField();
+    if (!host.isConnected || transferAbort.signal.aborted) return 'Bildübergabe beendet';
+    if (!field) return 'Bild: Uploadfeld nicht eindeutig gefunden. Sobald es bereit ist, „Daten eintragen / ergänzen“ erneut klicken.';
+    if (field.files.length) return 'Bild: vorhandene Bildauswahl bleibt unverändert';
+    const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(draft.image);
+    if (!match) return 'Bild: Format nicht unterstützt';
+    // Decode locally: no fetch(data:) dependency on the target site's CSP.
+    const bytes = Uint8Array.from(atob(match[2]), (character) => character.charCodeAt(0));
+    const extension = match[1] === 'image/jpeg' ? 'jpg' : match[1].split('/')[1];
+    const files = new DataTransfer();
+    files.items.add(new File([bytes], `artikel.${extension}`, { type: match[1] }));
+    field.files = files.files;
+    if (field.files.length !== 1) return 'Bild: Auswahl wurde nicht übernommen – bitte manuell hinzufügen';
+    imageTransferred = true;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return 'Bild: an Kleinanzeigen übergeben – bitte warten, bis die Bildvorschau erscheint';
+  }
   function watchForForm() {
     formObserver?.disconnect();
     clearTimeout(formTimer);
@@ -89,25 +139,12 @@
       notes.push(fillText(['beschreibung', 'description', 'addescription', 'ad-description'], draft.description, 'Beschreibung', true));
       notes.push(fillText(['preis', 'preis in €', 'price', 'adprice', 'ad-price', 'priceamount', 'price.amount'], String(draft.price), 'Preis'));
       notes.push(pickupOnly());
-      if (draft.image) {
-        const fields = [...document.querySelectorAll('input[type="file"]')].filter((field) => !field.disabled && /image|\.jpe?g|\.png/i.test(field.accept));
-        if (fields.length !== 1) notes.push('Bild: Uploadfeld nicht eindeutig gefunden');
-        else if (applied.has(fields[0]) || fields[0].files.length) notes.push('Bild: bereits übertragen oder Auswahl vorhanden');
-        else {
-          const blob = await (await fetch(draft.image)).blob();
-          const files = new DataTransfer();
-          files.items.add(new File([blob], `artikel.${blob.type.split('/')[1]}`, { type: blob.type }));
-          fields[0].files = files.files;
-          fields[0].dispatchEvent(new Event('change', { bubbles: true }));
-          applied.add(fields[0]);
-          notes.push('Bild: an Uploadfeld übergeben – Upload bitte kontrollieren');
-        }
-      } else notes.push('Kein Bild im Artikel hinterlegt');
+      notes.push(await fillImage());
     } catch { notes.push('Formular konnte nicht vollständig befüllt werden. Bitte manuell prüfen.'); }
     finally { shadow.querySelector('#status').textContent = notes.join(' · '); button.disabled = false; }
   }
   shadow.querySelector('#fill').addEventListener('click', fill);
-  shadow.querySelector('#close').addEventListener('click', async () => { formObserver?.disconnect(); clearTimeout(formTimer); await extensionApi.runtime.sendMessage({ type: 'discard' }); host.remove(); });
+  shadow.querySelector('#close').addEventListener('click', async () => { transferAbort.abort(); formObserver?.disconnect(); clearTimeout(formTimer); host.remove(); await extensionApi.runtime.sendMessage({ type: 'discard' }); });
   // Only explicit category/pickup options may be clicked; never publish or handle CAPTCHA.
   await fill();
 })();

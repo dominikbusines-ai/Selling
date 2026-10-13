@@ -58,6 +58,8 @@ Entwurfsdaten liegen nur im Sitzungsspeicher der Erweiterung (nicht synchronisie
 
 ## Wichtige Grenzen
 
+Ab Version 0.4.2 wartet die Bildübergabe bis zu 20 Sekunden auf ein verzögert geladenes Uploadfeld. Bereits ausgewählte Dateien werden nicht überschrieben; ein Bild wird pro geöffnetem Formular nur einmal übergeben. Bei mehreren möglichen Uploadfeldern erfolgt keine automatische Auswahl. Nach einem Timeout kann „Daten eintragen / ergänzen“ erneut versucht werden. Die Übergabe an das Feld bestätigt noch keinen erfolgreichen Server-Upload: die Kleinanzeigen-Bildvorschau prüfen.
+
 Der öffentliche Abruf des Einstellformulars lieferte während der Entwicklung HTTP 403. Es wurden keine Zugriffssperren umgangen. Die Feldzuordnung ist daher ein lokal getesteter Prototyp, keine bestätigte Live-Integration. Kategorieablauf, Anmeldung und Upload im echten Konto müssen vor produktiver Nutzung manuell geprüft werden. Bei Layoutänderungen oder nicht erkannten Feldern stoppt die Zuordnung für diese Felder. Captchas und andere Schutzmechanismen werden nicht bedient oder umgangen.
 
 Die Nutzungsbedingungen enthalten Einschränkungen für automatisierte Zugriffe. Eine Freigabe dieses Ablaufs durch Kleinanzeigen ist nicht bestätigt; vor produktiver Verwendung die Zulässigkeit mit Kleinanzeigen klären. Keine Verbindung zur Veröffentlichungsschnittstelle und keine Zusage, dass Kleinanzeigen die Befüllung akzeptiert.
