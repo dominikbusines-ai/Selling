@@ -48,7 +48,7 @@ Die Erweiterung ist nur für diese konkrete Selling-Adresse freigegeben. Bei ein
 ## Ablauf
 
 1. Änderungen am Artikel zuerst speichern. Übertragen wird der gespeicherte Artikel, nicht eine ungespeicherte Bearbeitung.
-2. „Inserieren“ anklicken und die Übertragung bestätigen. Titel, Beschreibung, Preis und gegebenenfalls das Originalbild werden übergeben.
+2. „Inserieren“ anklicken und die Übertragung bestätigen. Titel, Beschreibung, Preis und gegebenenfalls das Originalbild werden übergeben. Sobald die Erweiterung das Öffnen des Entwurfs bestätigt, setzt Selling automatisch „Inseriert“. Das ist keine Bestätigung einer Veröffentlichung oder eines erfolgreichen Bild-Uploads bei Kleinanzeigen. Bei Abbruch des Inserats kann der Status im Bearbeitungsfenster zurückgenommen werden. Die manuelle Kopierhilfe setzt den Status nicht automatisch.
 3. Kleinanzeigen öffnet sich in einem neuen Tab. Falls nötig, anmelden und anschließend im selben Tab „Anzeige aufgeben“ öffnen.
 4. Die Erweiterung versucht die bekannten leeren Felder zu befüllen. Nach der Kategorieauswahl gegebenenfalls „Daten eintragen / ergänzen“ drücken.
 5. Unbedingt Titel, Beschreibung, Bild-Upload, Preis einschließlich Dezimalstellen, Festpreis/VB, Kategorie, Versand und Standort kontrollieren. Fehlende/mehrdeutige Felder manuell ergänzen.
