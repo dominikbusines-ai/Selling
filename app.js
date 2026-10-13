@@ -246,7 +246,8 @@ function render() {
     card.querySelector('.item-date').textContent = `angelegt am ${formatDate(item.createdAt)}`;
     const itemCard = card.querySelector('.item-card');
     itemCard.classList.toggle('is-sold', Boolean(item.sold));
-    itemCard.classList.toggle('is-ready', Boolean(item.readyForSale && !item.sold));
+    itemCard.classList.toggle('is-ready', Boolean(item.readyForSale && !item.listed && !item.sold));
+    itemCard.classList.toggle('is-listed', Boolean(item.listed && !item.sold));
     if (item.image) {
       image.hidden = false;
       image.classList.add('is-loading');
@@ -361,9 +362,11 @@ function openForm(item = null) {
   elements.description.closest('label').hidden = valuables;
   elements.sold.closest('.sold-toggle').hidden = valuables;
   elements.ready.closest('.ready-toggle').hidden = valuables;
+  document.querySelector('.listed-toggle').hidden = valuables;
   elements.price.closest('label').querySelector('span').textContent = valuables ? 'Wert in Euro' : 'Preis in Euro';
   elements.form.reset(); elements.error.textContent = ''; state.imageData = item?.image || ''; state.imageFile = null; state.imageReadPromise = null; state.imagePath = item?.imagePath || ''; state.removedImagePath = '';
   state.editingItemId = item?.id || '';
+  document.querySelector('#item-listed').checked = Boolean(item?.listed);
   elements.id.value = item?.id || ''; elements.name.value = item?.name || ''; elements.price.value = item?.price ?? ''; elements.description.value = item?.description || '';
   elements.sold.checked = Boolean(item?.sold); elements.ready.checked = Boolean(item?.readyForSale); elements.soldPrice.value = item?.soldPrice ?? ''; updateSoldFields();
   elements.formEyebrow.textContent = item ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
@@ -641,6 +644,7 @@ function sameRemoteItems(previousItems, nextItems) {
       && item.sold === next.sold
       && itemSection(item) === itemSection(next)
       && item.readyForSale === next.readyForSale
+      && Boolean(item.listed) === Boolean(next.listed)
       && item.soldPrice === next.soldPrice
       && item.soldAt === next.soldAt
       && item.createdAt === next.createdAt;
@@ -654,7 +658,7 @@ async function loadRemoteItems({ silent = false } = {}) {
   if (error) { setSyncStatus('Synchronisierung fehlgeschlagen', 'error'); throw error; }
   await prepareImageLinks(data || []);
   const nextItems = await Promise.all((data || []).map(async (row) => ({
-    category: row.category || 'selling',
+    category: row.category || 'selling', listed: Boolean(row.listed),
     id: row.id, name: row.name, price: Number(row.price_cents || 0) / 100, description: row.description || '', imagePath: row.image_path || '', image: await signedImageUrl(row.image_path), sold: Boolean(row.sold), readyForSale: Boolean(row.ready_for_sale), soldPrice: row.sold_price_cents == null ? null : Number(row.sold_price_cents) / 100, soldAt: row.sold_at || null, createdAt: row.created_at
   })));
   if (!sameRemoteItems(state.items, nextItems)) {
@@ -708,7 +712,7 @@ async function saveRemoteItem(item) {
     imagePath = null;
   }
   const { error } = await supabaseClient.from('selling_items').upsert({
-    category: itemSection(item),
+    category: itemSection(item), listed: Boolean(item.listed),
     id: item.id, user_id: state.session.user.id, name: item.name, price_cents: Math.round(item.price * 100), description: item.description, image_path: imagePath, sold: Boolean(item.sold), ready_for_sale: Boolean(item.readyForSale), sold_price_cents: item.sold ? Math.round(Number(item.soldPrice) * 100) : null, sold_at: item.sold ? (item.soldAt || new Date().toISOString()) : null, updated_at: new Date().toISOString()
   }, { onConflict: 'id' });
   if (error) throw error;
@@ -732,6 +736,7 @@ async function submitItem(event) {
     const existing = state.items.find((item) => item.id === elements.id.value);
     const item = { id: existing?.id || newId(), name, price, description: elements.description.value.trim(), image: state.imageData, imagePath: state.imagePath, sold, readyForSale: elements.ready.checked, soldPrice, soldAt: sold ? (existing?.soldAt || new Date().toISOString()) : null, createdAt: existing?.createdAt || new Date().toISOString() };
     item.category = existing ? itemSection(existing) : state.formSection;
+    item.listed = !valuables && document.querySelector('#item-listed').checked;
     if (valuables) { item.description = ''; item.readyForSale = false; }
     elements.error.textContent = state.imageFile ? 'Bild wird hochgeladen …' : 'Eintrag wird gespeichert …';
     if (state.session) { await saveRemoteItem(item); await loadRemoteItems(); }

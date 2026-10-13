@@ -73,3 +73,5 @@ Der Fortschrittsbalken zählt überprüfbare Arbeitseinheiten: einen Schritt pro
 ## Verkaufsstatus einrichten
 
 Nach dem Einspielen der Website einmal `supabase-sold-items.sql` im Supabase SQL Editor ausführen. Das Skript ergänzt den Verkaufsstatus und den Status „Bereit zum Verkauf“. Danach können Gegenstände als verkauft oder als fertig eingerichtet markiert werden. Der Gesamtwert zeigt dann nur noch nicht verkaufte Gegenstände; der separate Verkaufswert zeigt die tatsächlichen Verkaufspreise und öffnet per Klick die Verkaufsliste.
+
+Vor dem Deployment des Status „Inseriert“ zusätzlich `supabase-listed-items.sql` im Supabase SQL Editor ausführen. Die Migration ergänzt ausschließlich eine Spalte; vorhandene Artikel werden nicht gelöscht. Im Bearbeitungsfenster kann „Inseriert“ manuell gesetzt werden (eine Entwurfsübergabe ist noch keine Veröffentlichung). Darstellung in beiden Ansichten: bereit = schwarzer Rahmen, inseriert = grüner Rahmen, verkauft = ausgegraut. Beim Zurücknehmen von „Verkauft“ erscheint wieder der Rahmen des zuvor gesetzten Status.
