@@ -100,6 +100,28 @@
     applied.add(field);
     return `${title}: eingetragen – bitte prüfen`;
   }
+  function negotiablePrice() {
+    const isVB = (text) => ['vb', 'verhandlungsbasis', 'vb (verhandlungsbasis)', 'verhandlungsbasis (vb)'].includes(normalize(text));
+    const selects = [...document.querySelectorAll('select')].filter(visible).flatMap((field) => {
+      const options = [...field.options].filter((option) => !option.disabled && isVB(option.textContent));
+      return options.length === 1 ? [{ field, option: options[0] }] : [];
+    });
+    const radios = [...document.querySelectorAll('input[type="radio"]')].filter((field) =>
+      !field.disabled && ((visible(field) && isVB(field.getAttribute('aria-label'))) ||
+        [...(field.labels || [])].some((label) => label.getClientRects().length && getComputedStyle(label).visibility !== 'hidden' && isVB(label.textContent))));
+    if (selects.length + radios.length !== 1) return 'Preisart: VB nicht eindeutig gefunden – bitte selbst auswählen';
+    const field = selects[0]?.field || radios[0];
+    const selected = () => selects.length ? field.value === selects[0].option.value : field.checked;
+    if (applied.has(field)) return selected() ? 'Preisart: VB ausgewählt' : 'Preisart wurde geändert – bleibt unverändert';
+    if (selects.length) {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(field, selects[0].option.value);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (!field.checked) field.click();
+    if (!selected()) return 'Preisart: VB wurde nicht übernommen – bitte manuell prüfen';
+    applied.add(field);
+    return 'Preisart: VB ausgewählt';
+  }
   function pickupOnly() {
     const labels = [...document.querySelectorAll('label')].filter((label) => normalize(label.textContent) === 'nur abholung' && label.getClientRects().length);
     const radios = labels.map((label) => label.control).filter((field) => field?.type === 'radio' && !field.disabled);
@@ -137,6 +159,7 @@
       }
       notes.push(fillText(['titel', 'title', 'adtitle', 'ad-title'], draft.name, 'Titel'));
       notes.push(fillText(['beschreibung', 'description', 'addescription', 'ad-description'], draft.description, 'Beschreibung', true));
+      notes.push(negotiablePrice());
       notes.push(fillText(['preis', 'preis in €', 'price', 'adprice', 'ad-price', 'priceamount', 'price.amount'], String(draft.price), 'Preis'));
       notes.push(pickupOnly());
       notes.push(await fillImage());
@@ -145,6 +168,6 @@
   }
   shadow.querySelector('#fill').addEventListener('click', fill);
   shadow.querySelector('#close').addEventListener('click', async () => { transferAbort.abort(); formObserver?.disconnect(); clearTimeout(formTimer); host.remove(); await extensionApi.runtime.sendMessage({ type: 'discard' }); });
-  // Only explicit category/pickup options may be clicked; never publish or handle CAPTCHA.
+  // Only explicit category/price-type/pickup options may be clicked; never publish or handle CAPTCHA.
   await fill();
 })();

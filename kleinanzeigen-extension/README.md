@@ -58,6 +58,8 @@ Entwurfsdaten liegen nur im Sitzungsspeicher der Erweiterung (nicht synchronisie
 
 ## Wichtige Grenzen
 
+Version 0.4.4: Bei der ersten Befüllung wird „VB“ / „Verhandlungsbasis“ als Preisart ausgewählt, sofern ein eindeutiges Auswahlfeld oder eine eindeutig beschriftete Radio-Option vorhanden ist. Der Preisbetrag bleibt separat. Spätere manuelle Änderungen an derselben Preisart-Auswahl werden bei erneutem Befüllen nicht überschrieben. Bei fehlender oder mehrdeutiger Auswahl zeigt die Erweiterung einen Hinweis.
+
 Version 0.4.3: Große Bilder werden auf der Selling-Website ausschließlich für die Übergabe auf maximal 450 KiB verkleinert (JPEG-Kopie, zunächst bis 1800 Pixel). Gespeicherte Originale bleiben unverändert. Hierfür die Website ebenfalls aktualisieren. Das Add-on entfernt vor neuen Übergaben abgelaufene Daten und Daten geschlossener Tabs. Bei Speicherfehlern wird nur der gerade neu erzeugte leere Tab entfernt, nie ein bestehender Entwurfs-Tab.
 
 ### Mehrere Entwürfe
